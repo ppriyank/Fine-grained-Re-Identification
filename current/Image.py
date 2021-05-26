@@ -23,7 +23,6 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 import torchvision.transforms as transforms
-# from tools import * 
 import models
 
 from loss import CrossEntropyLabelSmooth, TripletLoss , CenterLoss , OSM_CAA_Loss , Satisfied_Rank_loss2

@@ -51,6 +51,16 @@ def save_checkpoint(state, is_best, fpath='checkpoint.pth.tar'):
             os.remove(os.path.join(dir_, f))            
     torch.save(state, fpath)
     
+def read_json(fpath):
+    with open(fpath, 'r') as f:
+        obj = json.load(f)
+    return obj
+
+def write_json(obj, fpath):
+    mkdir_if_missing(osp.dirname(fpath))
+    with open(fpath, 'w') as f:
+        json.dump(obj, f, indent=4, separators=(',', ': '))
+
 
 
 def resume_from_checkpoint(save_dir, arch , model ):
