@@ -34,7 +34,7 @@ Check the dataset is properly loaded (update the `__factory`, if your dataset is
 ```
 python -c "import tools.data_manager as data_manager; dataset = data_manager.init_dataset(name="cuhk01")"
 ```
-
+ 
 
 
 
