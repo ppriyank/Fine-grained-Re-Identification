@@ -37,7 +37,14 @@ python -c "import tools.data_manager as data_manager; dataset = data_manager.ini
  
 # Training the model :
 
-Pre-trained ResNet models are assumed to be stored in `storage_dir +"resnet/"`. 
+Pre-trained ResNet models are assumed to be stored in `storage_dir +"resnet/"`.   
+`mode_name` stores the name (with absolute path) of the model to be loaded, if pretraining the entire model. It doesnt load the classifier (for loading the classifier, uncomment the code in the section `args.mode_name != ''`).   
+`--evaluate` saves the model after every evalaution.   
+`-opt` : configuration setting, we have provided only one setting in `tools/dataset_config.conf`, add the configuration there after running hyperparameter optimization there.  
+`--thresold` : number of epochs after which evalaution starts.   
+`--pretrain` : Loading the pre-trained ResNets. We have decided to not provide the `mars_sota.pth.tar` or any other pretrained ResNet. 
+`--fin-dim` : Dimension of the final features. 
+`'--rerank'` : Do a re-rank evaluation
 
 ## Images 
 Creating `st-ReID (ST)` metrics for the dataset is a recommended step (except for CUHK01 and VehicleID). The logic being : Arranging images in a seqeunce with camera and frame numbers all arranged in sequential manner. We then create a histogram distribution on them and store the distribution. When a test image comes, we assign it a histogram given its camera number and frame number. (These histograms are matches as well during evaluation boosting the accuracy significantly.)
@@ -45,16 +52,24 @@ Creating `st-ReID (ST)` metrics for the dataset is a recommended step (except fo
 
 `python Image.py ` has all the codes related to training. It evalautes after every every 10 epochs after the thresold.  
 
-`mode_name` stores the name (with absolute path) of the model to be loaded, if pretraining the entire model. It doesnt load the classifier (for loading the classifier, uncomment the code in the section `args.mode_name != ''`).   
-`--evaluate` saves the model after every evalaution. 
+`--seq-len` : Number of positive instances in a batch
 
 
 ### Cuhk01 (p=100) or (p=485)
 
 `--split=100` and `split=485` generates random splits. Run the experiments 10 times to get different splits 
+```
+python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --evaluate --height=256 --width=150 --split=100
+```
 
 ### Market 
 
+```
+
+
+
+python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --evaluate --height=256 --width=150 --split=100
+```
 
 ### VeRi
 
@@ -62,10 +77,13 @@ Creating `st-ReID (ST)` metrics for the dataset is a recommended step (except fo
 
 
 
-python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image"
 
 
-```python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --evaluate ```
+
+
+## Videos
+
+`--seq-len` : length of video clip 
 
 
 

@@ -75,9 +75,7 @@ parser.add_argument('--pretrain', action='store_true', help="evaluation only")
 parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
 
 
-parser.add_argument('--name', '--model_name', type=str, default='_supervised_erase_')
 parser.add_argument('-f', '--focus', type=str, default='rank-1', help="map,rerank_map")
-# parser.add_argument('--rerank', default=False, type=bool)
 parser.add_argument('--rerank', action='store_true', help="evaluation only")
 parser.add_argument('--load_distribution', action='store_true', help="evaluation only")
 
@@ -521,7 +519,6 @@ if args.thresold not in  args.epochs_eval:
 args.epochs_eval.append(args.max_epoch-1)
 print(args.epochs_eval)
 prev_best = 0 
-
 if args.evaluate:
     print("Evalauting the model as well :D ") 
     for epoch in range(0, args.max_epoch):
@@ -540,7 +537,7 @@ if args.evaluate:
                     save_checkpoint({
                             # 'centers' : criterion_center_loss.state_dict() , 
                             'state_dict': state_dict,
-                        }, is_best, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + args.height + "_" + args.width+ "_" + args.seq_len + "_" + args.train_batch + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
+                        }, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + args.height + "_" + args.width+ "_" + args.seq_len + "_" + args.train_batch + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
 else:
     for epoch in range(0, args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))

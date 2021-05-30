@@ -42,7 +42,7 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def save_checkpoint(state, is_best, fpath='checkpoint.pth.tar'):
+def save_checkpoint(state, fpath='checkpoint.pth.tar'):
     mkdir_if_missing(osp.dirname(fpath))
     matching_file = fpath.split("ep")[0].split("/")[-1]
     dir_ =  osp.dirname(fpath)
