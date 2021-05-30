@@ -151,8 +151,6 @@ class VideoDataset(Dataset):
             
             return imgs_array, pid, camid
 
-
-
         elif self.sample == 'dense':
             """
             Sample all frames in a video into a list of clips, each clip contains seq_len frames, batch_size needs to be set to 1.
@@ -353,19 +351,15 @@ class Image_inderase(Dataset):
     """
     sample_methods = ['evenly', 'random', 'all']
 
-    def __init__(self, dataset, seq_len=15, sample='evenly', transform=None , max_length=40 , height=224, width = 112):
+    def __init__(self, dataset, seq_len=15, transform=None , height=224, width = 112):
         self.dataset = dataset
         self.seq_len = seq_len
-        self.sample = sample
         self.transform = transform
-        self.max_length = max_length
         self.erase = RandomErasing3(probability=0.5, mean=[0.485, 0.456, 0.406])
         self.height = height
         self.width = width
         # print(self.height, self.width)
         print("loading images of size %d x %d"%(self.height, self.width))
-        if self.sample == "intelligent":
-            print("\nDistirbuted sampling chosen for dataloader as opposed to default sequence sampling\n")
         
 
     def __len__(self):
@@ -406,6 +400,7 @@ class Image_inderase(Dataset):
         labels = torch.tensor(labels)
         return imgs, labels
 
+
 def parse_frame_market(imgname, dict_cam_seq_max={}):
     # dict_cam_seq_max = {
     #     11: 72681, 12: 74546, 13: 74881, 14: 74661, 15: 74891, 16: 54346, 17: 0, 18: 0,
@@ -444,10 +439,6 @@ def parse_frame_cuhk03(imgname, dict_cam_seq_max={}):
     
     # print(new_name)
     return '{:0>7}'.format(str(re))
-
-
-
-
 
 class ImageDataset(Dataset):
     """Video Person ReID Dataset.

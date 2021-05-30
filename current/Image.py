@@ -2,19 +2,17 @@ from __future__ import print_function, absolute_import
 import os
 import sys
 
-# currentdir = os.path.dirname(os.path.realpath("/home/pp1953/code/Video-Person-ReID-master/current/conf_file_super_erase_image.py"))
-currentdir = os.path.dirname(os.path.realpath(__file__))
+# Do not run these if you in terminal
+currentdir = os.getcwd() 
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
-# storage_dir = "/beegfs/pp1953/"
 storage_dir = "/scratch/pp1953/"
 import argparse
 import configparser
 import random 
 import os.path as osp
 import numpy as np
-
 
 import torch
 import torch.nn as nn
@@ -28,7 +26,7 @@ import models
 from loss import CrossEntropyLabelSmooth, TripletLoss , CenterLoss , OSM_CAA_Loss , Satisfied_Rank_loss2
 from tools.transforms2 import *
 from tools.scheduler import WarmupMultiStepLR
-from tools.utils import AverageMeter, Logger, save_checkpoint
+from tools.utils import AverageMeter, save_checkpoint
 from tools.eval_metrics import evaluate , re_ranking
 from tools.samplers import RandomIdentitySampler
 from tools.video_loader import ImageDataset , Image_inderase
@@ -37,8 +35,6 @@ from tools.image_eval import eval, load_distribution , fliplr, eval_vehicleid
 
 
 print("Current File Name : ",os.path.realpath(__file__))
-
-
 
 parser = argparse.ArgumentParser(description='Train video model with cross entropy loss')
 parser.add_argument('-d', '--dataset', type=str, default='mars',
@@ -51,14 +47,15 @@ parser.add_argument('--width', type=int, default=112,
                     help="width of an image (default: 112)")
 parser.add_argument('--seq-len', type=int, default=4, help="number of images to sample in a tracklet")
 # Optimization options
-parser.add_argument('--max-epoch', default=201, type=int,
+parser.add_argument('--max-epoch', default=500, type=int,
                     help="maximum epochs to run")
 parser.add_argument('--train-batch', default=32, type=int,
                     help="train batch size")
 parser.add_argument('--test-batch', default=256, type=int)
 # Architecture
-parser.add_argument('-a', '--arch', type=str, default="ResNet50ta_bt5", help="resnet503d, resnet50tp, resnet50ta, resnetrnn")
+parser.add_argument('-a', '--arch', type=str, default="ResNet50TA_BT_image", help="ResNet50TA_BT_image or ResNet50TA_BT_video")
 parser.add_argument('--pool', type=int, default=100)
+parser.add_argument('--split', type=int, default=100)
 parser.add_argument('-n', '--mode-name', type=str, default='', help="ResNet50ta_bt2_supervised_erase_59_checkpoint_ep81.pth.tar, \
     ResNet50ta_bt2_supervised_erase_44_checkpoint_ep101.pth.tar")
 
@@ -97,8 +94,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_devices
 
 cudnn.benchmark = True
 if args.dataset == "cuhk01":
-    print("  SPLIT --  ", args.pool)
-    dataset = data_manager.init_dataset(name=args.dataset, splits= args.pool)
+    print("  SPLIT --  ", args.split)
+    dataset = data_manager.init_dataset(name=args.dataset, splits= args.split)
 else:
     dataset = data_manager.init_dataset(name=args.dataset)
 
@@ -119,7 +116,7 @@ transform_test = transforms.Compose([
 ])
 
 trainloader = DataLoader(
-    Image_inderase(dataset.train, seq_len=args.seq_len, sample=args.sampling,transform=transform_train , height=args.height, width=args.width),
+    Image_inderase(dataset.train, seq_len=args.seq_len, transform=transform_train , height=args.height, width=args.width),
     batch_size=args.train_batch, num_workers=args.workers,
     pin_memory=pin_memory, drop_last=True,
 )
@@ -157,44 +154,18 @@ galleryloader = DataLoader(
     pin_memory=pin_memory, drop_last=False,
 )
 
-# import pdb
-# pdb.set_trace()
 
+import pdb
+pdb.set_trace()
 
 print(args)
 opt = args.opt
-# opt = "4"
 lamb = 0.3
-
 base_learning_rate = 0.00035
-config = configparser.ConfigParser()
-
-dirpath = os.getcwd() 
-
-# config.read('/home/pp1953/code/Video-Person-ReID-master/tools/val.conf')    
 print("==========")
-if args.dataset == "mars":
-    print("val.conf")
-    config.read(dirpath + "/../tools/val.conf")        
-elif args.dataset == "prid" or args.dataset == "veri":
-    print("val_prid.conf")
-    config.read(dirpath + "/../tools/val_prid.conf")
-# elif args.dataset == "ilidsvid" or args.dataset == "vric" :
-elif args.dataset == "ilidsvid" :
-    print("val_ilidsvid.conf")
-    config.read(dirpath + "/../tools/val_ilidsvid.conf")
-# elif args.dataset == "vehicleid" :    
-#     print("vehicle.conf")
-#     config.read(dirpath + "/../tools/vehicle.conf")
-else:
-    print("val.conf")
-    config.read(dirpath + "/../tools/val.conf")        
-    # print("market.conf")
-    # config.read(dirpath + "/../tools/market.conf")        
-    # print("val_ilidsvid.conf")
-    # config.read(dirpath + "/../tools/val_ilidsvid.conf")
-
-
+config = configparser.ConfigParser()
+print("dataset_config.conf")
+config.read(currentdir + "/../tools/dataset_config.conf")        
 margin =  float(config[opt]['margin'])
 alpha =  float(config[opt]['alpha'])
 l = float(config[opt]['l'])
@@ -631,9 +602,6 @@ else:
 
                 
 
-# python conf_file_super_erase_image.py -d=duke --opt=24 --thresold=0 --max-epoch=500 -a="ResNet50ta_bt10" --sampling="intelligent" --mode_name="--" 
-# python hyoer_image.py -d=market --opt=24 --thresold=0 --max-epoch=500 -a="ResNet50ta_bt10" --sampling="intelligent" 
 
 
-# python hyper_image.py -d=market_sub -a="ResNet50ta_bt10" --sampling="intelligent" 
 

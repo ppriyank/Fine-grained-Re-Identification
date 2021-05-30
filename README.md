@@ -32,9 +32,24 @@ Change the `storage_dir` in tools/data_manager.py to the root folder of storage 
 Check the dataset is properly loaded (update the `__factory`, if your dataset is not present, else use the name highlighted in `__factory` as the way of calling the dataset ): 
 
 ```
-python -c "import tools.data_manager as data_manager; dataset = data_manager.init_dataset(name="cuhk01")"
+python -c "import tools.data_manager as data_manager; dataset = data_manager.init_dataset(name='cuhk01')"
 ```
  
+# Training the model :
+
+## Images 
+
+### Cuhk01 (p=100) or (p=485)
+
+`--split=100` and `split=485` generates random splits. Run the experiments 10 times to get different splits 
+
+
+### Market or VeRi
+
+`python Image.py ` has all the codes related to training. It evalautes after every 
+
+```python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image"  ```
+
 
 
 

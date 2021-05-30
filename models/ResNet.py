@@ -6,7 +6,6 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 import torchvision
 from tools.helplayer import weights_init_kaiming 
-from tools.transforms2 import batch_augment
 
 __all__ = [ 'ResNet50TA_BT_image', 'ResNet50TA_BT_video']
  

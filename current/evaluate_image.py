@@ -2,19 +2,17 @@ from __future__ import print_function, absolute_import
 import os
 import sys
 
-# currentdir = os.path.dirname(os.path.realpath("/home/pp1953/code/Video-Person-ReID-master/current/conf_file_super_erase_image.py"))
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
-storage_dir = "/beegfs/pp1953/"
+
 # storage_dir = "/scratch/pp1953/"
 import argparse
 import configparser
 import random 
 import os.path as osp
 import numpy as np
-
 
 import torch
 import torch.nn as nn
@@ -25,17 +23,10 @@ from torch.autograd import Variable
 import torchvision.transforms as transforms
 # from tools import * 
 import models
-
-from loss import CrossEntropyLabelSmooth, TripletLoss , CenterLoss , OSM_CAA_Loss , Satisfied_Rank_loss2
-from tools.transforms2 import *
-from tools.scheduler import WarmupMultiStepLR
-from tools.utils import AverageMeter, Logger, save_checkpoint
 from tools.eval_metrics import evaluate , re_ranking
-from tools.samplers import RandomIdentitySampler
-from tools.video_loader import ImageDataset , Image_inderase
+from tools.video_loader import ImageDataset 
 import tools.data_manager as data_manager
 from tools.image_eval import eval, load_distribution , fliplr, eval_vehicleid
-
 
 print("Current File Name : ",os.path.realpath(__file__))
 
@@ -52,10 +43,6 @@ parser.add_argument('--width', type=int, default=112,
                     help="width of an image (default: 112)")
 parser.add_argument('--seq-len', type=int, default=4, help="number of images to sample in a tracklet")
 # Optimization options
-parser.add_argument('--max-epoch', default=201, type=int,
-                    help="maximum epochs to run")
-parser.add_argument('--train-batch', default=32, type=int,
-                    help="train batch size")
 parser.add_argument('--test-batch', default=256, type=int)
 # Architecture
 parser.add_argument('-a', '--arch', type=str, default="ResNet50ta_bt5", help="resnet503d, resnet50tp, resnet50ta, resnetrnn")
@@ -69,14 +56,14 @@ parser.add_argument('--evaluate', action='store_true', help="evaluation only")
 parser.add_argument('--save-dir', type=str, default='log')
 parser.add_argument('--name', '--model_name', type=str, default='_supervised_erase_')
 parser.add_argument('--gpu-devices', default='0,1,2', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
-parser.add_argument('-opt', '--opt', type=str, default='3', help="choose opt")
-parser.add_argument('-s', '--sampling', type=str, default='random', help="choose sampling for training")
-parser.add_argument('--thresold', type=int, default='60')
 parser.add_argument('-f', '--focus', type=str, default='rank-1', help="map,rerank_map")
-parser.add_argument('--heads', default=4, type=int, help="no of heads of multi head attention")
 parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
-# parser.add_argument('--rerank', default=False, type=bool)
 parser.add_argument('--rerank', action='store_true', help="evaluation only")
+
+
+
+
+
 
 
 args = parser.parse_args()
@@ -85,11 +72,6 @@ torch.manual_seed(args.seed)
 torch.cuda.manual_seed_all(args.seed)
 use_gpu = torch.cuda.is_available()
 np.random.seed(args.seed)
-
-if use_gpu:
-    print("train_batch===" ,  args.train_batch , "seq_len" , args.seq_len, "no of gpus : " , os.environ['CUDA_VISIBLE_DEVICES'], torch.cuda.device_count() )
-else:
-    print("train_batch===" ,  args.train_batch , "seq_len" , args.seq_len)
 
 args.gpu_devices = ",".join([str(i) for i in range(torch.cuda.device_count())])
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_devices
@@ -143,7 +125,6 @@ galleryloader = DataLoader(
 )
 
 print(args)
-opt = args.opt
 lamb = 0.3
 
 print("==========")
