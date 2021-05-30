@@ -2,7 +2,8 @@ import tools.data_manager as data_manager
 import numpy as np 
 import scipy.io
 
-# dataset_name=  "market"
+storage = "/scratch/pp1953/"
+# dataset_name=  "market"s
 dataset_name=  "market2"
 dataset = data_manager.init_dataset(name=dataset_name)
 
@@ -154,5 +155,5 @@ for ele in dataset.train    :
 distribution = spatial_temporal_distribution(camera_id, labels, frames)		
 
 result = {'distribution':distribution}
-scipy.io.savemat('/beegfs/pp1953/distribution_market2.mat',result)
+scipy.io.savemat(storage + 'distribution_'+dataset_name+'.mat',result)
 

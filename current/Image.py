@@ -8,6 +8,9 @@ parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
 storage_dir = "/scratch/pp1953/"
+pretrained_ResNets = storage_dir +"resnet/"
+
+
 import argparse
 import configparser
 import random 
@@ -36,7 +39,7 @@ from tools.image_eval import eval, load_distribution , fliplr, eval_vehicleid
 
 print("Current File Name : ",os.path.realpath(__file__))
 
-parser = argparse.ArgumentParser(description='Train video model with cross entropy loss')
+parser = argparse.ArgumentParser(description='Train Image model')
 parser.add_argument('-d', '--dataset', type=str, default='mars',
                     choices=data_manager.get_names())
 parser.add_argument('-j', '--workers', default=4, type=int,
@@ -45,7 +48,7 @@ parser.add_argument('--height', type=int, default=224,
                     help="height of an image (default: 224)")
 parser.add_argument('--width', type=int, default=112,
                     help="width of an image (default: 112)")
-parser.add_argument('--seq-len', type=int, default=4, help="number of images to sample in a tracklet")
+parser.add_argument('--seq-len', type=int, default=4, help="number of images to sample in a tracklet (Number of images belonging to the same label)")
 # Optimization options
 parser.add_argument('--max-epoch', default=500, type=int,
                     help="maximum epochs to run")
@@ -54,26 +57,28 @@ parser.add_argument('--train-batch', default=32, type=int,
 parser.add_argument('--test-batch', default=256, type=int)
 # Architecture
 parser.add_argument('-a', '--arch', type=str, default="ResNet50TA_BT_image", help="ResNet50TA_BT_image or ResNet50TA_BT_video")
-parser.add_argument('--pool', type=int, default=100)
 parser.add_argument('--split', type=int, default=100)
-parser.add_argument('-n', '--mode-name', type=str, default='', help="ResNet50ta_bt2_supervised_erase_59_checkpoint_ep81.pth.tar, \
-    ResNet50ta_bt2_supervised_erase_44_checkpoint_ep101.pth.tar")
+
 
 # Miscs
 parser.add_argument('--seed', type=int, default=1, help="manual seed")
-parser.add_argument('--evaluate', action='store_true', help="evaluation only")
-parser.add_argument('--save-dir', type=str, default='log')
-parser.add_argument('--name', '--model_name', type=str, default='_supervised_erase_')
 parser.add_argument('--gpu-devices', default='0,1,2', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
-parser.add_argument('-opt', '--opt', type=str, default='3', help="choose opt")
-parser.add_argument('-s', '--sampling', type=str, default='random', help="choose sampling for training")
+parser.add_argument('-opt', '--opt', type=str, default='dataset', help="choose configuration setting")
 parser.add_argument('--thresold', type=int, default='60')
-parser.add_argument('-f', '--focus', type=str, default='rank-1', help="map,rerank_map")
-parser.add_argument('--heads', default=4, type=int, help="no of heads of multi head attention")
+
+parser.add_argument('-n', '--mode-name', type=str, default='', help="ResNet50ta_bt2_supervised_erase_59_checkpoint_ep81.pth.tar, \
+    ResNet50ta_bt2_supervised_erase_44_checkpoint_ep101.pth.tar")
+
+parser.add_argument('--evaluate', action='store_true', help="evaluation only")
+parser.add_argument('--save-dir', type=str, default=pretrained_ResNets + "trained/")
+parser.add_argument('--pretrain', action='store_true', help="evaluation only")
 parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
+
+
+parser.add_argument('--name', '--model_name', type=str, default='_supervised_erase_')
+parser.add_argument('-f', '--focus', type=str, default='rank-1', help="map,rerank_map")
 # parser.add_argument('--rerank', default=False, type=bool)
 parser.add_argument('--rerank', action='store_true', help="evaluation only")
-parser.add_argument('--pretrain', action='store_true', help="evaluation only")
 parser.add_argument('--load_distribution', action='store_true', help="evaluation only")
 
 
@@ -141,22 +146,18 @@ elif args.dataset == "vehicleid":
 else:
     mode =  3
 
+
 queryloader = DataLoader(
     ImageDataset(dataset.query, seq_len=args.seq_len, sample='dense', transform=transform_test,eval=True, mode=mode, height=args.height, width=args.width),
     batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
     pin_memory=pin_memory, drop_last=False,
 )
 
-
 galleryloader = DataLoader(
     ImageDataset(dataset.gallery, seq_len=args.seq_len, sample='dense', transform=transform_test,eval=True, mode=mode , height=args.height, width=args.width),
     batch_size=args.test_batch, shuffle=False, num_workers=args.workers,
     pin_memory=pin_memory, drop_last=False,
 )
-
-
-import pdb
-pdb.set_trace()
 
 print(args)
 opt = args.opt
@@ -178,11 +179,6 @@ if 'var_weight' in config[opt]:
 else:
     var_weight = 0.01 * 0.001
 
-# if 'H2_weight' in config[opt]:
-#     H2_weight = float(config[opt]['H2_weight'])
-# else:
-#     H2_weight = 10
-
 if 'lsr_weight' in config[opt]:
     lsr_weight = float(config[opt]['lsr_weight'])
 else:
@@ -193,37 +189,24 @@ if 'lcn_weight' in config[opt]:
 else:
     lcn_weight = 1
 
-
 if 'weight_decay' in config[opt]:
     weight_decay = float(config[opt]['weight_decay'])
 else:
     weight_decay = 0.0005
 
-if 'batch_size' in config[opt]:
-    batch_size = int(config[opt]['batch_size'])
-else:
-    batch_size = 32
-
-
 print("==========")
-attention_heads = None 
-model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids , fin_dim=args.fin_dim, heads=args.heads)
+model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids , fin_dim=args.fin_dim)
 
-# model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids )
 if args.pretrain:
     print("LOADING PRETRAINED MODEL")
     if mode == 5:
-        path = storage_dir +"dataset/" +"bt13_vehicle_150_250_32_4_78_8_39.pth.tar"
+        path =  pretrained_ResNets +"bt13_vehicle_150_250_32_4_78_8_39.pth.tar"
         print( "Loading vehicleid model" )
-    # elif mode == 7:
-    #     path = storage_dir +"resnet/" +"bt10_veri_82_44.pth.tar"
-    #     print( "Loading VERI model" )
-    elif mode == 1:
-        path =  storage_dir +"dataset/" +"mars_sota.pth.tar"
-        # path =  storage_dir +"resnet/bt15_mars_250_150_32_4_4_84_7_53.pth.tar"
-        print( "Loading ** NEW ** MARS model" , path)
+    elif mode == 7:
+        path = pretrained_ResNets +"bt10_veri_82_44.pth.tar"
+        print( "Loading VERI model" )
     else:
-        path =  storage_dir +"dataset/" +"mars_sota.pth.tar"
+        path =  pretrained_ResNets +"mars_sota.pth.tar"
         print( "Loading MARS model" , path)
     if use_gpu:
         checkpoint = torch.load( path  )
@@ -231,10 +214,7 @@ if args.pretrain:
         checkpoint = torch.load( path , map_location=torch.device('cpu') )
     state_dict = {}
     state_dict2 = {}
-    # import pdb
-    # pdb.set_trace()
     if mode == 5 :
-    # if mode == 5 or mode == 1:
         for key in checkpoint['state_dict']:
             if "base_mars" in  key :
                 temp = key.replace("base_mars." , "")
@@ -244,16 +224,9 @@ if args.pretrain:
             if "base" in  key :
                 temp = key.replace("base." , "")
                 state_dict[temp] = checkpoint['state_dict'][key]
-    # import pdb
-    # pdb.set_trace()
-    # print(model.attention_conv.weight[200][100])
-    # print(model.base_mars[0].weight[40][0])
     model.base_mars.load_state_dict(state_dict,  strict=True)
-    # print(model.attention_conv.weight[200][100])
-    # model.attention_conv.weight
-    # .load_state_dict(state_dict,  strict=True)
-    # model.base_mars.state_dict().keys()
     del  state_dict , state_dict2, checkpoint
+
 
 print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
 
@@ -358,10 +331,7 @@ def test_rerank(model, queryloader, galleryloader , use_gpu=True):
 
     g_camids = []
     g_pids = []    
-    cam_dis_query = None
-    cam_dis_gallery = None
     qf = torch.FloatTensor()
-
     with torch.no_grad():
         for batch_idx, (imgs) in enumerate(queryloader):
             if mode != 3 and mode != 7 :
@@ -475,10 +445,7 @@ def test_rerank(model, queryloader, galleryloader , use_gpu=True):
             gf=gf.transpose()
             qf=qf.transpose()/np.power(np.sum(np.power(qf,2),axis=1),0.5)
             qf=qf.transpose()
-            if type(cam_dis_query) == type(None):
-                CMC, mAP =  eval(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , distribution  )
-            else:
-                CMC, mAP =  eval(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , distribution , cam_dis_query=cam_dis_query, cam_dis_gallery=cam_dis_gallery )
+            CMC, mAP =  eval(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , distribution  )
             ranks=[1, 5, 10, 20]
             print("Results ---------- ")
             print("mAP: {:.1%}".format(mAP))
@@ -486,7 +453,6 @@ def test_rerank(model, queryloader, galleryloader , use_gpu=True):
             for r in ranks:
                 print("Rank-{:<3}: {:.1%}".format(r, CMC[r-1]))
             print("------------------")
-        
         
         if args.focus == "map":
             print("returning map")
@@ -522,21 +488,9 @@ def display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank=N
         return mAP , None , cmc
     
 
-
-args.save_dir = storage_dir 
-# args.save_dir = storage_dir + "resnet/"
-args.name += "_" + args.dataset + "_" + str(args.heads) + "_"
-is_best = 0
-prev_best = 0 
-
-
+ 
 if args.mode_name != '':
-    name="resnet/bt15_mars_250_150_32_4_4_84_7_53.pth.tar"
-    # name =  "resnet/bt13_vehicle_150_250_32_4_78_8_39.pth.tar"
-    # name = "resnet/bt15_market2_250_150_32_4_91_3_44.pth.tar"
-    # name = "resnet/bt9_mars_53_83-9.pth.tar"
-    # name =  "resnet/bt10_vehicle_78_150_250_44.pth.tar"
-    
+    name=args.mode_name
     print("loading .... " , name)
     if use_gpu:
         checkpoint = torch.load(osp.join(args.save_dir, name)  )
@@ -548,15 +502,13 @@ if args.mode_name != '':
             if "classifier" not in  key:
                 state_dict["module." + key] = checkpoint['state_dict'][key]
         model.load_state_dict(state_dict,  strict=False)
-    else:
-        for key in checkpoint['state_dict']:
-            state_dict["module." + key] = checkpoint['state_dict'][key]
-        model.load_state_dict(state_dict,  strict=True)
-
+        # for key in checkpoint['state_dict']:
+        #     state_dict["module." + key] = checkpoint['state_dict'][key]
+        # model.load_state_dict(state_dict,  strict=True)
     del state_dict, checkpoint
 
 
-args.save_dir = storage_dir + "resnet/trained/"
+
 print ("======================" , opt , "=========================")
 print (args.arch)
 print("evaluation at every 10 epochs, Highly GPU/CPU expensive process, avoid running anything in Parallel")
@@ -565,12 +517,13 @@ args.epochs_eval = [factor * i for i in range(int(args.max_epoch / factor)) if i
 if args.thresold not in  args.epochs_eval:
     args.epochs_eval.append(args.thresold)
 
+
 args.epochs_eval.append(args.max_epoch-1)
 print(args.epochs_eval)
 prev_best = 0 
-# test_rerank(model, queryloader, galleryloader, use_gpu)
-rank1 = test_rerank(model, queryloader, galleryloader, use_gpu)
-if args.evaluate: 
+
+if args.evaluate:
+    print("Evalauting the model as well :D ") 
     for epoch in range(0, args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
         train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa)
@@ -587,7 +540,7 @@ if args.evaluate:
                     save_checkpoint({
                             # 'centers' : criterion_center_loss.state_dict() , 
                             'state_dict': state_dict,
-                        }, is_best, osp.join(args.save_dir, args.arch+ "_" + args.name + "_"  +args.opt+ '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
+                        }, is_best, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + args.height + "_" + args.width+ "_" + args.seq_len + "_" + args.train_batch + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
 else:
     for epoch in range(0, args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
@@ -598,10 +551,4 @@ else:
                 if rank1 > prev_best:
                     prev_best  = rank1
                     print("\nBest Model so far\n")
-
-
-                
-
-
-
 

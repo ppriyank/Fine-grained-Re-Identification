@@ -37,18 +37,35 @@ python -c "import tools.data_manager as data_manager; dataset = data_manager.ini
  
 # Training the model :
 
+Pre-trained ResNet models are assumed to be stored in `storage_dir +"resnet/"`. 
+
 ## Images 
+Creating `st-ReID (ST)` metrics for the dataset is a recommended step (except for CUHK01 and VehicleID). The logic being : Arranging images in a seqeunce with camera and frame numbers all arranged in sequential manner. We then create a histogram distribution on them and store the distribution. When a test image comes, we assign it a histogram given its camera number and frame number. (These histograms are matches as well during evaluation boosting the accuracy significantly.)
+
+
+`python Image.py ` has all the codes related to training. It evalautes after every every 10 epochs after the thresold.  
+
+`mode_name` stores the name (with absolute path) of the model to be loaded, if pretraining the entire model. It doesnt load the classifier (for loading the classifier, uncomment the code in the section `args.mode_name != ''`).   
+`--evaluate` saves the model after every evalaution. 
+
 
 ### Cuhk01 (p=100) or (p=485)
 
 `--split=100` and `split=485` generates random splits. Run the experiments 10 times to get different splits 
 
+### Market 
 
-### Market or VeRi
 
-`python Image.py ` has all the codes related to training. It evalautes after every 
+### VeRi
 
-```python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image"  ```
+`mode == 5`, the pretrained ResNet is pretrained on `VehicleID dataset`. Similarly if you are training on VehicleID dataset, we suggest using VeRI pretrained ResNet. 
+
+
+
+python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image"
+
+
+```python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --evaluate ```
 
 
 

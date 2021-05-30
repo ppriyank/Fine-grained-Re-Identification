@@ -154,7 +154,6 @@ class ResNet50TA_BT_image(nn.Module):
         self.conv1.apply(weights_init_kaiming)
         self.w_z.weight.data.fill_(0.0)
         
-        
     def forward(self, x):
         
         b = x.size(0)

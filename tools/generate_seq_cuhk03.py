@@ -1,21 +1,14 @@
-import os
-import sys
-currentdir = os.path.dirname(os.path.realpath(__file__))
-parentdir = os.path.dirname(currentdir)
-sys.path.append(parentdir)
-
 import tools.data_manager as data_manager
 import numpy as np 
 import scipy.io
 
 storage = "/scratch/pp1953/"
-dataset_name=  "vric"
+dataset_name=  "cuhk03"
 dataset = data_manager.init_dataset(name=dataset_name)
-
-max_hist = 1000
 
 def spatial_temporal_distribution(camera_id, labels, frames):
     class_num=max(labels)+1
+    max_hist = 5000
     max_cam = max(camera_id) 
     spatial_temporal_sum = np.zeros((class_num,max_cam))                       
     spatial_temporal_count = np.zeros((class_num,max_cam))
@@ -54,8 +47,7 @@ def spatial_temporal_distribution(camera_id, labels, frames):
     return distribution  
 
 
-# cams = set([ele[2] for ele in dataset.query])
-# len(cams)
+
 camera_id = dataset.camids
 # 12936
 labels = []
@@ -65,7 +57,7 @@ for ele in dataset.train    :
 	for path in ele[0]:
 		labels.append(ele[1])
 		name = path.split("/")[-1]
-		frame = name.split("_")[-1].split(".")[0][3:]
+		frame = name.split("_")[-1].split(".")[0]
 		frames.append(int(frame))
 
 
@@ -75,4 +67,6 @@ distribution = spatial_temporal_distribution(camera_id, labels, frames)
 
 result = {'distribution':distribution}
 scipy.io.savemat(storage + 'distribution_'+dataset_name+'.mat',result)
+
+
 
