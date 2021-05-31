@@ -87,6 +87,13 @@ torch.cuda.manual_seed_all(args.seed)
 use_gpu = torch.cuda.is_available()
 np.random.seed(args.seed)
 
+
+try:
+    os.makedirs(args.save_dir)
+except FileExistsError:
+    # directory already exists
+    pass
+    
 if use_gpu:
     print("train_batch===" ,  args.train_batch , "seq_len" , args.seq_len, "no of gpus : " , os.environ['CUDA_VISIBLE_DEVICES'], torch.cuda.device_count() )
 else:
@@ -196,7 +203,7 @@ print("==========")
 model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids , fin_dim=args.fin_dim)
 
 if args.pretrain:
-    print("LOADING PRETRAINED MODEL")
+    print("LOADING PRETRAINED ResNet")
     if mode == 5:
         path =  pretrained_ResNets +"bt13_vehicle_150_250_32_4_78_8_39.pth.tar"
         print( "Loading vehicleid model" )
@@ -489,7 +496,7 @@ def display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank=N
  
 if args.mode_name != '':
     name=args.mode_name
-    print("loading .... " , name)
+    print("loading pre-trained model .... " , name)
     if use_gpu:
         checkpoint = torch.load(osp.join(args.save_dir, name)  )
     else:
@@ -516,6 +523,8 @@ if args.thresold not in  args.epochs_eval:
     args.epochs_eval.append(args.thresold)
 
 
+
+
 args.epochs_eval.append(args.max_epoch-1)
 print(args.epochs_eval)
 prev_best = 0 
@@ -537,15 +546,19 @@ if args.evaluate:
                     save_checkpoint({
                             # 'centers' : criterion_center_loss.state_dict() , 
                             'state_dict': state_dict,
-                        }, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + args.height + "_" + args.width+ "_" + args.seq_len + "_" + args.train_batch + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
+                        }, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + str(args.height) + "_" + str(args.width)+ "_" + str(args.seq_len) + "_" + str(args.train_batch) + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
 else:
     for epoch in range(0, args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
         train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa)
         scheduler.step()
         if epoch in args.epochs_eval :
-                rank1 = test_rerank(model, queryloader, galleryloader, use_gpu)
-                if rank1 > prev_best:
-                    prev_best  = rank1
-                    print("\nBest Model so far\n")
+            if use_gpu:
+                state_dict = model.module.state_dict()
+            else:
+                state_dict = model.state_dict()
+                save_checkpoint({
+                            # 'centers' : criterion_center_loss.state_dict() , 
+                            'state_dict': state_dict,
+                }, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + str(args.height) + "_" + str(args.width)+ "_" + str(args.seq_len) + "_" + str(args.train_batch) + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
 

@@ -7,13 +7,11 @@ currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
-storage_dir = "/beegfs/pp1953/"
+storage_dir = "/scratch/pp1953/"
 import argparse
-import configparser
 import random 
 import os.path as osp
 import numpy as np
-
 
 import torch
 import torch.nn as nn
@@ -21,15 +19,9 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 import torchvision.transforms as transforms
-# from tools import * 
 import models
-
-
-from tools.transforms2 import *
-from tools.utils import AverageMeter, Logger, save_checkpoint
 from tools.eval_metrics import evaluate , re_ranking
-from tools.samplers import RandomIdentitySampler
-from tools.video_loader import ImageDataset , Image_inderase
+from tools.video_loader import ImageDataset 
 import tools.data_manager as data_manager
 from tools.image_eval import eval, load_distribution , fliplr, scoring , eval2 , eval_vehicleid
 

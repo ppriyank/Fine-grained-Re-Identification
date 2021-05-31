@@ -3352,26 +3352,27 @@ class Market1501_2(object):
 
 
 __factory = {
+    'duke_video' : DukeMTMC_VideoReID,
     'mars': Mars,
     'ilidsvid': iLIDSVID,
     'prid': PRID,
+    'vehicleid': VehicleID,
+    'vric': VRIC, 
+    'cuhk01': CUHK01,
+    'cuhk03': CUHK03,
+    'grid' : GRID,
+    'veri': VeRi,
+    'msmt17': MSMT17,
+
     'mars_subset' :Mars_subset,
     'mars_subset2' :Mars_subset2,
     'prid_subset' :PRID_subset,
     'ilidsvid_subset' : iLIDSVID_subset,
-    'cuhk01': CUHK01,
-    'cuhk03': CUHK03,
     'duke' : DukeMTMCreID,
     'market' : Market1501,
     'market2' : Market1501_2,
     'market_sub' : Market1501_subset,
-    'grid' : GRID,
-    'veri': VeRi,
-    'msmt17': MSMT17,
-    'vric': VRIC, 
-    'vehicleid': VehicleID,
     'vehicleid_subset': VehicleID_subset,
-    'duke_video' : DukeMTMC_VideoReID,
     'mars2': Mars2
 }
 
