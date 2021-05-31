@@ -6,7 +6,8 @@ parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
 storage_dir = "/scratch/pp1953/"
-# storage_dir = "/scratch/pp1953/"
+pretrained_ResNets = storage_dir +"resnet/"
+
 import argparse
 import configparser
 import random 
@@ -21,13 +22,12 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 import torchvision.transforms as transforms
-# from tools import * 
 import models
 
 from loss import CrossEntropyLabelSmooth, TripletLoss , CenterLoss , OSM_CAA_Loss , Satisfied_Rank_loss2
 from tools.transforms2 import *
 from tools.scheduler import WarmupMultiStepLR
-from tools.utils import AverageMeter, Logger, save_checkpoint
+from tools.utils import AverageMeter, save_checkpoint
 from tools.eval_metrics import evaluate , re_ranking
 from tools.samplers import RandomIdentitySampler
 from tools.video_loader import VideoDataset , VideoDataset_inderase
@@ -36,9 +36,7 @@ import tools.data_manager as data_manager
 
 print("Current File Name : ",os.path.realpath(__file__))
 
-
-
-parser = argparse.ArgumentParser(description='Train video model with cross entropy loss')
+parser = argparse.ArgumentParser(description='Train video model')
 parser.add_argument('-d', '--dataset', type=str, default='mars',
                     choices=data_manager.get_names())
 parser.add_argument('-j', '--workers', default=4, type=int,
@@ -49,46 +47,31 @@ parser.add_argument('--width', type=int, default=112,
                     help="width of an image (default: 112)")
 parser.add_argument('--seq-len', type=int, default=4, help="number of images to sample in a tracklet")
 # Optimization options
-parser.add_argument('--max-epoch', default=201, type=int,
+parser.add_argument('--max-epoch', default=600, type=int,
                     help="maximum epochs to run")
 parser.add_argument('--train-batch', default=32, type=int,
                     help="train batch size")
 parser.add_argument('--test-batch', default=1, type=int, help="has to be 1")
 parser.add_argument('--num-instances', type=int, default=4, help="number of instances per identity")
 # Architecture
-parser.add_argument('-a', '--arch', type=str, default="ResNet50ta_bt5", help="resnet503d, resnet50tp, resnet50ta, resnetrnn")
-parser.add_argument('--pool', type=str, default='avg', choices=['avg', 'max'])
-parser.add_argument('-n', '--mode-name', type=str, default='', help="ResNet50ta_bt2_supervised_erase_59_checkpoint_ep81.pth.tar, \
-    ResNet50ta_bt2_supervised_erase_44_checkpoint_ep101.pth.tar")
-
+parser.add_argument('-a', '--arch', type=str, default="ResNet50TA_BT_video", help="ResNet50TA_BT_video or ResNet50TA_BT_image")
+parser.add_argument('-n', '--mode-name', type=str, default='', help="load pretrained model")
 # Miscs
 parser.add_argument('--seed', type=int, default=1, help="manual seed")
 parser.add_argument('--evaluate', action='store_true', help="evaluation only")
 parser.add_argument('--save-dir', type=str, default='log')
-parser.add_argument('--name', '--model_name', type=str, default='_supervised_erase_')
 parser.add_argument('--gpu-devices', default='0,1,2', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
-parser.add_argument('-opt', '--opt', type=str, default='3', help="choose opt")
+parser.add_argument('-opt', '--opt', type=str, default='dataset', help="choose opt")
 parser.add_argument('-s', '--sampling', type=str, default='random', help="choose sampling for training")
 parser.add_argument('--thresold', type=int, default='60')
-parser.add_argument('-f', '--focus', type=str, default='map', help="map,rerank_map")
+parser.add_argument('-f', '--focus', type=str, default='map', help="map,rerank_map,rank-1")
 parser.add_argument('--heads', default=4, type=int, help="no of heads of multi head attention")
 parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
-
 parser.add_argument('--pretrain', action='store_true', help="evaluation only")
 
 
 args = parser.parse_args()
 use_gpu = torch.cuda.is_available()
-
-# random.seed(args.seed)
-# torch.manual_seed(args.seed)
-# torch.cuda.manual_seed_all(args.seed)
-# np.random.seed(args.seed)
-random.seed(1)
-torch.manual_seed(1)
-torch.cuda.manual_seed_all(1)
-np.random.seed(1)
-
 
 if use_gpu:
     print("train_batch===" ,  args.train_batch , "seq_len" , args.seq_len, "no of gpus : " , os.environ['CUDA_VISIBLE_DEVICES'], torch.cuda.device_count() )
@@ -97,19 +80,29 @@ else:
 
 args.gpu_devices = ",".join([str(i) for i in range(torch.cuda.device_count())])
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_devices
-
 cudnn.benchmark = True
 
-
 if args.dataset != "ilidsvid" and args.dataset != "prid":
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    np.random.seed(args.seed)
     dataset = data_manager.init_dataset(name=args.dataset)
 else:
+    random.seed(1)
+    torch.manual_seed(1)
+    torch.cuda.manual_seed_all(1)
+    np.random.seed(1)
     print("Split -- ", args.seed)
     dataset = data_manager.init_dataset(name=args.dataset, split_id=args.seed)
 
 
 
-
+try:
+    os.makedirs(args.save_dir)
+except FileExistsError:
+    # directory already exists
+    pass
 
 pin_memory = True if use_gpu else False
 transform_train = transforms.Compose([
@@ -126,6 +119,7 @@ transform_test = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
+
 
 trainloader = DataLoader(
     VideoDataset_inderase(dataset.train, seq_len=args.seq_len, sample=args.sampling,transform=transform_train),
@@ -159,29 +153,15 @@ else:
 
 print(args)
 opt = args.opt
-# opt = "4"
 lamb = 0.3
-
 base_learning_rate = 0.00035
 config = configparser.ConfigParser()
-
 dirpath = os.getcwd() 
 
-# config.read('/home/pp1953/code/Video-Person-ReID-master/tools/val.conf')    
-
-if args.dataset == "mars":
-    print("val.conf")
-    config.read(dirpath + "/../tools/val.conf")        
-elif args.dataset == "prid":
-    print("val_prid.conf")
-    config.read(dirpath + "/../tools/val_prid.conf")
-elif args.dataset == "ilidsvid":
-    print("val_ilidsvid.conf")
-    config.read(dirpath + "/../tools/val_ilidsvid.conf")
-else:
-    print("val.conf")
-    config.read(dirpath + "/../tools/val.conf")        
-
+print("==========")
+config = configparser.ConfigParser()
+print("dataset_config.conf")
+config.read(currentdir + "/../tools/dataset_config.conf")        
 margin =  float(config[opt]['margin'])
 alpha =  float(config[opt]['alpha'])
 l = float(config[opt]['l'])
@@ -204,7 +184,6 @@ if 'lcn_weight' in config[opt]:
 else:
     lcn_weight = 1
 
-
 if 'weight_decay' in config[opt]:
     weight_decay = float(config[opt]['weight_decay'])
 else:
@@ -216,25 +195,13 @@ else:
     batch_size = 32
 
 
+model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids , fin_dim=args.fin_dim)
 
-
-
-attention_heads = None 
-model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids , fin_dim=args.fin_dim, heads=args.heads)
-# model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids )
-# 
 if args.pretrain :
-    print("LOADING PRETRAINED MARS")
+    print("LOADING PRETRAINED ResNet")
     if args.dataset == "mars":
-        if args.name == '1':
-            path =storage_dir +  "resnet/bt15_dukevideo_220_150_32_5_4_95_2_59.pth.tar"
-        elif args.name == '2':
-            path =storage_dir + "resnet/bt15_dukevideo_220_150_32_5_4_95_3_59.pth.tar"
-        elif args.name == '3':
-            path = storage_dir + "resnet/bt15_dukevideo_250_150_32_4_4_95_0_59.pth.tar"
-        else:
-            path = storage_dir + "resnet/bt15_dukevideo_250_150_32_4_4_95_0_59.pth.tar"
-        print( "Loading ** NEW ** DUKE VIDEO  model" )
+        # path = pretrained_ResNets + "bt15_dukevideo_220_150_32_5_4_95_2_59.pth.tar"
+        path =  pretrained_ResNets + "mars_sota.pth.tar"
         if use_gpu:
             checkpoint = torch.load( path  )
         else:
@@ -242,69 +209,19 @@ if args.pretrain :
         state_dict = {}
         state_dict2 = {}
         for key in checkpoint['state_dict']:
-            if "base_mars" in  key :
-                temp = key.replace("base_mars." , "")
+            if "base" in  key :
+                temp = key.replace("base." , "")
                 state_dict[temp] = checkpoint['state_dict'][key]
-        # path =  storage_dir + "resnet/mars_sota.pth.tar"
-        # print( "Loading MARS model" )
-        # if use_gpu:
-        #     checkpoint = torch.load( path  )
-        # else:
-        #     checkpoint = torch.load( path , map_location=torch.device('cpu') )
-        # state_dict = {}
-        # state_dict2 = {}
-        # for key in checkpoint['state_dict']:
-        #     if "base" in  key :
-        #         temp = key.replace("base." , "")
-        #         state_dict[temp] = checkpoint['state_dict'][key]
-    else:
-        if True :
-            path =  storage_dir + "dataset/mars_sota.pth.tar"
-            print( "Loading ** OLD ** MARS model"  , path)
-            
-            if use_gpu:
-                checkpoint = torch.load( path  )
-            else:
-                checkpoint = torch.load( path , map_location=torch.device('cpu') )
-            state_dict = {}
-            state_dict2 = {}
-            for key in checkpoint['state_dict']:
-                if "base" in  key :
-                    temp = key.replace("base." , "")
-                    state_dict[temp] = checkpoint['state_dict'][key]
-        else:
-            path =  storage_dir + "dataset/bt15_mars_250_150_32_5_4_86_1_53.pth.tar"
-            print( "Loading ** NEW ** MARS model"  , path)
-            if use_gpu:
-                checkpoint = torch.load( path  )
-            else:
-                checkpoint = torch.load( path , map_location=torch.device('cpu') )
-            state_dict = {}
-            state_dict2 = {}
-            for key in checkpoint['state_dict']:
-                if "base_mars" in  key :
-                    temp = key.replace("base_mars." , "")
-                    state_dict[temp] = checkpoint['state_dict'][key]
-
-    # import pdb
-    # pdb.set_trace()
-    # print(model.attention_conv.weight[200][100])
-    # print(model.base_mars[0].weight[40][0])
     model.base_mars.load_state_dict(state_dict,  strict=True)
-    # print(model.attention_conv.weight[200][100])
-    # model.attention_conv.weight
-    # .load_state_dict(state_dict,  strict=True)
-    # model.base_mars.state_dict().keys()
     del  state_dict , state_dict2, checkpoint
 
-print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
 
+print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
 criterion_htri = TripletLoss(margin, 'cosine')
 criterion_xent = CrossEntropyLabelSmooth(dataset.num_train_pids,use_gpu=use_gpu)
 criterion_center_loss = CenterLoss(use_gpu=use_gpu , feat_dim=args.fin_dim  , num_classes= dataset.num_train_pids)
 criterion_osm_caa = OSM_CAA_Loss(alpha=alpha , l=l , osm_sigma=sigma ,use_gpu=use_gpu)
 criterion_lsr = Satisfied_Rank_loss2(use_gpu=use_gpu)
-
 params = []
 for key, value in model.named_parameters():
     if not value.requires_grad:
@@ -316,11 +233,8 @@ for key, value in model.named_parameters():
 optimizer = torch.optim.Adam(params)
 scheduler = WarmupMultiStepLR(optimizer, milestones=[40, 70], gamma=gamma, warmup_factor=0.01, warmup_iters=10)
 optimizer_center = torch.optim.SGD(criterion_center_loss.parameters(), lr=0.5)
-
-
 if use_gpu:
     model = nn.DataParallel(model).cuda()
-
 
 def train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa=None,):
     model.train()
@@ -375,11 +289,8 @@ def train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu
         # print(model.module.gamma)
     print("Var ({:.6f}) lcns ({:.6f}) l_sr ({:.6f})  TripletLoss  ({:.6f}) OSM Loss: ({:.6f}) Total Loss {:.6f} ({:.6f})  ".format(var.item(), lcns.item() , lsr.item() ,triplet_loss.item(), osm_caa_loss.item(),losses.val, losses.avg))        
 
-        
-
-
-
-def test_rerank(model, queryloader, galleryloader, pool, use_gpu):
+    
+def test_rerank(model, queryloader, galleryloader, use_gpu):
     model.eval()
     global temp_count
     qf, q_pids, q_camids = [], [], []
@@ -450,8 +361,6 @@ def test_rerank(model, queryloader, galleryloader, pool, use_gpu):
                 return re_rank_mAP
 
 
-
-
 def display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank=None, rerank=False , ranks=[1, 5, 10, 20]):
     print("Original Computing CMC and mAP")
     cmc, mAP = evaluate(distmat, q_pids, g_pids, q_camids, g_camids)
@@ -476,22 +385,9 @@ def display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank=N
         return cmc
     
 
-    
-
-version =args.name
-# ResNet50ta_bt9__supervised_erase__mars_4__53_checkpoint_ep201.pth.tar
-
 if args.mode_name != '':
-    if args.name == '1':
-        name =storage_dir +  "resnet/bt15_dukevideo_220_150_32_5_4_95_2_59.pth.tar"
-    elif args.name == '2':
-        name =storage_dir + "resnet/bt15_dukevideo_220_150_32_5_4_95_3_59.pth.tar"
-    elif args.name == '3':
-        name = storage_dir + "resnet/bt15_dukevideo_250_150_32_4_4_95_0_59.pth.tar"
-    
-    # name = args.mode_name
-    # name = "ResNet50ta_bt2_supervised_erase_59_checkpoint_ep81.pth.tar"
-    print("loading .... " , name)
+    name = args.mode_name
+    print("loading pretrained model .... " , name)
     if use_gpu:
         checkpoint = torch.load(osp.join(name)  )
     else:
@@ -508,15 +404,6 @@ if args.mode_name != '':
     model.load_state_dict(state_dict,  strict=False)
             
     
-
-args.save_dir = storage_dir + "resnet/trained/"
-args.name += "_" + args.dataset + "_" + str(args.heads) + "_"
-is_best = 0
-prev_best = 0 
-
-
-print ("======================" , opt , "=========================")
-print (args.arch)
 print("evaluation at every 10 epochs, Highly GPU/CPU expensive process, avoid running anything in Parallel")
 factor = 10
 args.epochs_eval = [factor * i for i in range(int(args.max_epoch / factor)) if i * factor >= args.thresold ]
@@ -526,15 +413,14 @@ if args.thresold not in  args.epochs_eval:
 args.epochs_eval.append(args.max_epoch-1)
 print(args.epochs_eval)
 prev_best = 0 
-
 if args.evaluate: 
-    print("MODEL SAVING IS ON !!!")
+    print("Evaluation is ON!!!")
     for epoch in range(0, args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
         train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa)
         scheduler.step()
         if epoch in args.epochs_eval :
-                rank1 = test_rerank(model, queryloader, galleryloader, args.pool, use_gpu)
+                rank1 = test_rerank(model, queryloader, galleryloader, use_gpu)
                 if rank1 > prev_best:
                     print("\n\n Saving the model \n\n")
                     prev_best  = rank1
@@ -543,35 +429,20 @@ if args.evaluate:
                     else:
                         state_dict = model.state_dict()
                     save_checkpoint({
-                            # 'centers' : criterion_center_loss.state_dict() , 
                             'state_dict': state_dict,
-                        }, is_best, osp.join(args.save_dir, args.arch+ "_" + args.name + "_"  +args.opt+ '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
+                        }, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + str(args.height) + "_" + str(args.width)+ "_" + str(args.seq_len) + "_" + str(args.train_batch) + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))
 else:
     for epoch in range(0, args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
         train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa)
         scheduler.step()
         if epoch in args.epochs_eval :
-                rank1 = test_rerank(model, queryloader, galleryloader, args.pool, use_gpu)
-                if rank1 > prev_best:
-                    prev_best  = rank1
-                    print("\nBest Model so far\n")
+            import pdb
+            pdb.set_trace()
+            if use_gpu:
+                state_dict = model.module.state_dict()
+            else:
+                state_dict = model.state_dict()
+            torch.save({'state_dict': state_dict}, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + str(args.height) + "_" + str(args.width)+ "_" + str(args.seq_len) + "_" + str(args.train_batch) + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))
 
 
-# for epoch in range(0, args.max_epoch):
-#     print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
-#     train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa)
-#     scheduler.step()
-#     if epoch in args.epochs_eval :
-#             # rank1 = test_rerank(model, queryloader, galleryloader, args.pool, use_gpu)
-#             # if rank1 > prev_best:
-#             print("\n\n Saving the model \n\n")
-#             if use_gpu:
-#                 state_dict = model.module.state_dict()
-#             else:
-#                 state_dict = model.state_dict()
-
-#             fpath = "/scratch/pp1953/resnet_"+ str(version) +"_" +str(args.opt)+"/" + str(args.arch)+ "_" + str(args.height) + "_" + str(args.width) + "_"  + str(args.train_batch) + "_" + str(args.num_instances) + "_" + str(args.seq_len) + "_"  + str(epoch+1) +  '.pth.tar'
-#             torch.save({'state_dict': state_dict}, fpath)    
-
-# python conf_file_super_erase.py -d=ilidsvid --opt=32 --thresold=0 --heads=10 --max-epoch=500 -a="ResNet50ta_bt11" --sampling="intelligent"                

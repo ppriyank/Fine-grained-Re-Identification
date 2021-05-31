@@ -69,6 +69,7 @@ We are using `Market-1501-v15.09.15` dataset for experiments. Since Market is a 
 
 `generate_seq_market.py` creates distribution/histogram for the dataset, saves in the distribution in the file: `/scratch/pp1953/dataset/distribution_market2.mat` (change the storage directory)
 
+`evaluate_image` evalautes all saved model (very very slow) using all the techinques I could find out, which worked on other datasets. 
 
 ```
 python Image.py -d=market2 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/"
@@ -85,30 +86,28 @@ python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --wi
 `mode == 5`, the pretrained ResNet is pretrained on `VehicleID dataset`. Similarly if you are training on VehicleID dataset, we suggest using VeRI pretrained ResNet. 
 
 
-### Other datasets like : (VehicleID , VRIC, CUHK03, GRID, MSMT17)
-Should be easy to run if you understand the code. I discarded these datasets after the premilinary results were that good. 
-
-
-'duke_video' : DukeMTMC_VideoReID,
-    'mars': Mars,
-    'ilidsvid': iLIDSVID,
-    'prid': PRID,
-    'vehicleid': ,
-    'vric': , 
-    'cuhk01': CUHK01,
-    'cuhk03': ,
-    'grid' : ,
-    'veri': VeRi,
-    'msmt17': ,
-
-
-
-
 ## Videos
 
-`--seq-len` : length of video clip 
+For `iLIDSVID` and `PRID` use `--seed` to do expierments on different splits and average the results of 10 splits. `Mars` dataset is huge for evalauting it, the max size of clips used is 32, while for other datasets is 40. 
+
+`--seq-len` : length of video clip   
+`--num-instances` : number of instances belonging to the same class (referred as --seq-len in images)
+
+```
+python Video.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --evaluate --height=256 --width=150 --split=486 --mode-name="/scratch/pp1953/resnet/trained/ResNet50TA_BT_image_cuhk01_dataset_256_150_4_32_checkpoint_ep2.pth.tar"
+```
+
+### Other datasets like : (VehicleID , VRIC, CUHK03, GRID, MSMT17, DukeMTMC_VideoReID)
+Should be easy to run if you understand the code. I discarded these datasets after the premilinary experiments werent promising. 
 
 
+
+
+
+## To do : 
+clear other datasets   
+merge evaluate video scripts into one  
+check the code for hyper parameter optimization   
 
 
 

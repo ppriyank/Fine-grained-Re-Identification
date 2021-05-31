@@ -226,7 +226,7 @@ def test_rerank(model, queryloader, galleryloader , use_gpu=True):
 
 def re_score(gf, g_pids , g_camids, gframes, qf , q_pids, q_camids, qframes):
     print("Computing distance matrix")
-    print("------------------""------------------""------  Normal Calculation (L2) ------------------""------------------""------------------")
+    print("------------------""------------------""------  Normal Calculation (L2) & Re-rank ------------------""------------------""------------------")
     qf = torch.tensor(qf)
     gf = torch.tensor(gf)
     m, n = qf.size(0), gf.size(0)
@@ -269,9 +269,9 @@ def re_score(gf, g_pids , g_camids, gframes, qf , q_pids, q_camids, qframes):
         for r in ranks:
             print("Rank-{:<3}: {:.1%} vs {:.1%} vs {:.1%}".format(r, CMC_dot[r-1], CMC[r-1], CMC_re_rank[r-1]))
     else:
+        mAP , re_rank_mAP , CMC = display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank, rerank=True )
         print("------------------""------------------""------------------""------------------""------------------""------------------")
         print("------------------""------------------""------  Dot Product + Normalized vector Re-rank ------------------""------------------""------------------")    
-        mAP , re_rank_mAP , CMC = display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank, rerank=True )
         gf=gf.transpose()/np.power(np.sum(np.power(gf,2),axis=1),0.5)
         gf=gf.transpose()
         qf=qf.transpose()/np.power(np.sum(np.power(qf,2),axis=1),0.5)
@@ -280,7 +280,7 @@ def re_score(gf, g_pids , g_camids, gframes, qf , q_pids, q_camids, qframes):
         score = -np.matmul(qf , gf.transpose())
         mAP , re_rank_mAP , CMC = display_results(score, q_pids, g_pids, q_camids, g_camids,distmat_rerank, rerank=True )
         print("------------------""------------------""------------------""------------------""------------------""------------------")
-        print("------------------""------------------""------  Using disttibution ------------------""------------------""------------------")    
+        print("------------------""------------------""------  Using disttibution (st-ReID) ------------------""------------------""------------------")    
         CMC_orig, mAP_orig =  eval(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , distribution  )
         ranks=[1, 5, 10, 20]
         print("Results ---------- ")
@@ -289,7 +289,7 @@ def re_score(gf, g_pids , g_camids, gframes, qf , q_pids, q_camids, qframes):
         for r in ranks:
             print("Rank-{:<3}: {:.1%}".format(r, CMC_orig[r-1]))
         print("------------------")
-        print("------------------""------------------""------  Distirbution + Re-rank ------------------""------------------""------------------")    
+        print("------------------""------------------""------  Distirbution + Re-rank (st-ReID) ------------------""------------------""------------------")    
         all_features = np.concatenate([qf,gf],axis=0)
         all_labels = np.concatenate([q_pids,g_pids],axis=0)
         all_cams = np.concatenate([q_camids,g_camids],axis=0)
@@ -375,3 +375,4 @@ for file in  os.listdir(args.save_dir):
 
 
 
+# Debugging 

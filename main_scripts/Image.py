@@ -66,14 +66,12 @@ parser.add_argument('--gpu-devices', default='0,1,2', type=str, help='gpu device
 parser.add_argument('-opt', '--opt', type=str, default='dataset', help="choose configuration setting")
 parser.add_argument('--thresold', type=int, default='60')
 
-parser.add_argument('-n', '--mode-name', type=str, default='', help="ResNet50ta_bt2_supervised_erase_59_checkpoint_ep81.pth.tar, \
-    ResNet50ta_bt2_supervised_erase_44_checkpoint_ep101.pth.tar")
+parser.add_argument('-n', '--mode-name', type=str, default='', help="load pretrained model")
 
 parser.add_argument('--evaluate', action='store_true', help="evaluation only")
 parser.add_argument('--save-dir', type=str, default=pretrained_ResNets + "trained/")
 parser.add_argument('--pretrain', action='store_true', help="evaluation only")
 parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
-
 
 parser.add_argument('-f', '--focus', type=str, default='rank-1', help="map,rerank_map")
 parser.add_argument('--rerank', action='store_true', help="evaluation only")
