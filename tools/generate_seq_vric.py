@@ -1,14 +1,16 @@
-import os
-import sys
+import os 
+import sys 
+
 currentdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = os.path.dirname(currentdir)
 sys.path.append(parentdir)
 
-import tools.data_manager as data_manager
 import numpy as np 
 import scipy.io
+import tools.data_manager as data_manager
 
-storage = "/scratch/pp1953/"
+
+storage = "/scratch/pp1953/dataset/"
 dataset_name=  "vric"
 dataset = data_manager.init_dataset(name=dataset_name)
 

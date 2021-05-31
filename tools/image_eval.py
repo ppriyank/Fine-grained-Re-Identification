@@ -58,53 +58,16 @@ def process_chunk(chunk, index):
     return chunk
 
 def load_distribution(path, dataset):    
-    # if osp.exists("/beegfs/pp1953/distribution_original_" + dataset + ".mat"):
-    #     result2 = scipy.io.loadmat(path)
-    #     distribution = result2['distribution']
-    #     return distribution
-    # path = "/beegfs/pp1953/distribution_vric.mat"
     result2 = scipy.io.loadmat(path)
     distribution = result2['distribution']
-    #############################################################
-    # import multiprocessing as mp
-    # n_proc = mp.cpu_count()
-    # n_proc = 8 
-    # if distribution.shape[0] >  50:
-    #     chunksize = distribution.shape[0] // n_proc
-    #     proc_chunks = []
-    #     for i_proc in range(n_proc):
-    #         chunkstart = i_proc * chunksize
-    #         chunkend = (i_proc + 1) * chunksize if i_proc < n_proc - 1 else distribution.shape[0]
-    #         print(chunkstart , chunkend)
-    #         # make sure to include the division remainder for the last process
-    #         proc_chunks.append(distribution[slice(chunkstart, chunkend)])
-    #     with mp.Pool(processes=n_proc) as pool:
-    #         # starts the sub-processes without blocking
-    #         # pass the chunk to each worker process
-    #         proc_results = [pool.apply_async(process_chunk, args=(chunk,i)) for i,chunk in enumerate(proc_chunks)]
-    #         # print(proc_results)
-    #         result_chunks = [r.get() for r in proc_results]
-    #         distribution = np.concatenate(result_chunks, axis=0)
-            
-    # else:
     for i in range(0,distribution.shape[0]):
-        # print(i , "\r")
         for j in range(0,distribution.shape[1]):
-            # print(i,j, end="\r")
-            # print("gauss "+str(i)+"->"+str(j))
-            # gauss_smooth(distribution[i][j])
             distribution[i][j][:]=gauss_smooth2(distribution[i][j][:],smooth)
     eps = 0.0000001
     sum_ = np.sum(distribution,axis=2)
     for i in range(distribution.shape[0]):
         for j in range(distribution.shape[1]):
-            # print(i,j, end='\r')
             distribution[i][j][:]=distribution[i][j][:]/(sum_[i][j]+eps)     
-            # result = {'distribution_original':distribution}
-            # scipy.io.savemat('/beegfs/pp1953/distribution_original_vric.mat',result)
-    result = {'distribution':distribution}
-    scipy.io.savemat("/beegfs/pp1953/distribution_original_" + dataset + ".mat" , result)
-
     return distribution
 
 

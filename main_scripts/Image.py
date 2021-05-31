@@ -553,12 +553,11 @@ else:
         train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa)
         scheduler.step()
         if epoch in args.epochs_eval :
+            import pdb
+            pdb.set_trace()
             if use_gpu:
                 state_dict = model.module.state_dict()
             else:
                 state_dict = model.state_dict()
-                save_checkpoint({
-                            # 'centers' : criterion_center_loss.state_dict() , 
-                            'state_dict': state_dict,
-                }, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + str(args.height) + "_" + str(args.width)+ "_" + str(args.seq_len) + "_" + str(args.train_batch) + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))            
+            torch.save({'state_dict': state_dict}, osp.join(args.save_dir,  args.arch+ "_" + args.dataset + "_" + args.opt+"_" + str(args.height) + "_" + str(args.width)+ "_" + str(args.seq_len) + "_" + str(args.train_batch) + '_checkpoint_ep' + str(epoch+1) + '.pth.tar'))
 

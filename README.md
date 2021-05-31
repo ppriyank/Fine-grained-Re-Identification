@@ -36,7 +36,7 @@ python -c "import tools.data_manager as data_manager; dataset = data_manager.ini
 ```
  
 # Training the model :
-Run the training scripts from current folder `cd current/`
+Run the training scripts from current folder `cd main_scripts/`
 
 Pre-trained ResNet models are assumed to be stored in `storage_dir +"resnet/"`.   
 `mode_name` stores the name (with absolute path) of the model to be loaded, if pretraining the entire model. It doesnt load the classifier (for loading the classifier, uncomment the code in the section `args.mode_name != ''`).   
@@ -55,6 +55,7 @@ Creating `st-ReID (ST)` metrics for the dataset is a recommended step (except fo
 
 `--seq-len` : Number of positive instances in a batch
 
+`normal` is the method of evaluating normally, embedding comparison. if `normal` is `false`, we average embedding of image and its flipped mirror reflection 
 
 ### CUHK01 (p=100) or (p=485)
 
@@ -66,24 +67,39 @@ python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=50
 ### Market 
 We are using `Market-1501-v15.09.15` dataset for experiments. Since Market is a huge dataset, we evalaute st-ReID and re-rank separately. Evalauting while training will take long, so you can just save model after every epoch. 
 
-`generate_seq_market.py` creates distribution/histogram for the dataset. 
+`generate_seq_market.py` creates distribution/histogram for the dataset, saves in the distribution in the file: `/scratch/pp1953/dataset/distribution_market2.mat` (change the storage directory)
+
 
 ```
 python Image.py -d=market2 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/"
 
 cd ../
-python generate_seq_market.py
+python tools/generate_seq_market.py
 
+cd main_scripts/
+python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/"
 ```
-
-
 
 ### VeRi
 
 `mode == 5`, the pretrained ResNet is pretrained on `VehicleID dataset`. Similarly if you are training on VehicleID dataset, we suggest using VeRI pretrained ResNet. 
 
 
+### Other datasets like : (VehicleID , VRIC, CUHK03, GRID, MSMT17)
+Should be easy to run if you understand the code. I discarded these datasets after the premilinary results were that good. 
 
+
+'duke_video' : DukeMTMC_VideoReID,
+    'mars': Mars,
+    'ilidsvid': iLIDSVID,
+    'prid': PRID,
+    'vehicleid': ,
+    'vric': , 
+    'cuhk01': CUHK01,
+    'cuhk03': ,
+    'grid' : ,
+    'veri': VeRi,
+    'msmt17': ,
 
 
 
