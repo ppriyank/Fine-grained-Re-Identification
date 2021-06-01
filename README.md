@@ -48,7 +48,7 @@ conda clean --all --yes
 # Model architecture
 The figure is taken from our paper and re-labeled according to our model script for easier understanding
 
-<img src="https://github.com/ppriyank/Fine-grained-Re-Identification/blob/main/model.jpg" width="900">
+<img src="https://github.com/ppriyank/Fine-grained-Re-Identification/blob/main/model.jpg" width="1200">
 
 # Dataset Setup
 
