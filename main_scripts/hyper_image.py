@@ -369,8 +369,6 @@ print(values)
 
 
 
-# python conf_file_super_erase_image.py -d=market --opt=24 --thresold=0 --max-epoch=500 -a="ResNet50ta_bt10" --sampling="intelligent" 
-
 
 # python hyoer_image.py -d=market --opt=24 --thresold=0 --max-epoch=500 -a="ResNet50ta_bt10" --sampling="intelligent" 
 # python hyper_image.py -d=market_sub -a="ResNet50ta_bt10" --sampling="intelligent" 

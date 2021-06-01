@@ -57,14 +57,14 @@ Creating `st-ReID (ST)` metrics for the dataset is a recommended step (except fo
 
 `normal` is the method of evaluating normally, embedding comparison. if `normal` is `false`, we average embedding of image and its flipped mirror reflection 
 
-### CUHK01 (p=100) or (p=485)
+#### CUHK01 (p=100) or (p=485)
 
 `--split=100` and `split=485` generates random splits. Run the experiments 10 times to get different splits 
 ```
 python Image.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --evaluate --height=256 --width=150 --split=486 --mode-name="/scratch/pp1953/resnet/trained/ResNet50TA_BT_image_cuhk01_dataset_256_150_4_32_checkpoint_ep2.pth.tar"
 ```
 
-### Market 
+#### Market 
 We are using `Market-1501-v15.09.15` dataset for experiments. Since Market is a huge dataset, we evalaute st-ReID and re-rank separately. Evalauting while training will take long, so you can just save model after every epoch. 
 
 `generate_seq_market.py` creates distribution/histogram for the dataset, saves in the distribution in the file: `/scratch/pp1953/dataset/distribution_market2.mat` (change the storage directory)
@@ -81,7 +81,7 @@ cd main_scripts/
 python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/" --load-distribution
 ```
 
-### VeRi
+#### VeRi
 
 `mode == 5`, the pretrained ResNet is pretrained on `VehicleID dataset`. Similarly if you are training on VehicleID dataset, we suggest using VeRI pretrained ResNet. 
 
@@ -102,27 +102,22 @@ parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for cen
 parser.add_argument('--pretrain', action='store_true', help="evaluation only")
 
 
-### iLIDSVID & PRID
+#### iLIDSVID & PRID
 ```
 python Video.py -d=ilidsvid --split=1 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_video" --pretrain  --evaluate --height=256 --width=150 --train-batch=28 --seq-len=5 --num-instances=4 --save-dir="/scratch/pp1953/resnet/trained/iLIDSVID/"
 ```
 
-### Mars
+#### Mars
 Do not evaluate model and just save all of them, to be evalauted later. 
-```
-python Video.py -d=ilidsvid --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_video" --pretrain  --height=256 --width=150 --train-batch=28 --seq-len=5 --num-instances=4 --save-dir="/scratch/pp1953/resnet/trained/iLIDSVID/"
 
+```
 python Video.py -d=mars --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_video" --pretrain  --height=256 --width=150 --train-batch=28 --seq-len=5 --num-instances=4 --save-dir="/scratch/pp1953/resnet/trained/MARS/"
 
-python evaluate_videos.py -d=ilidsvid -a="ResNet50TA_BT_video" --height=256 --width=150 --seq-len=5  --save-dir="/scratch/pp1953/resnet/trained/iLIDSVID/"
+python evaluate_videos.py -d=mars -a="ResNet50TA_BT_video" --height=256 --width=150 --seq-len=5  --save-dir="/scratch/pp1953/resnet/trained/MARS/"
 ```
 
-
-
-### Other datasets like : (VehicleID , VRIC, CUHK03, GRID, MSMT17, DukeMTMC_VideoReID)
+#### Other datasets like : (VehicleID , VRIC, CUHK03, GRID, MSMT17, DukeMTMC_VideoReID)
 Should be easy to run if you understand the code. I discarded these datasets after the premilinary experiments werent promising. 
-
-
 
 
 # Evalaution 
@@ -133,7 +128,9 @@ If you have trained model (both images and videos) put it one a path:
 python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/" --load-distribution 
 ```
 #### Videos
-
+```
+python evaluate_videos.py -d=mars -a="ResNet50TA_BT_video" --height=256 --width=150 --seq-len=5  --save-dir="/scratch/pp1953/resnet/trained/MARS/"
+```
 
 # Note 
 
@@ -142,5 +139,4 @@ python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --wi
 
 # To do : 
 clear other datasets   
-merge evaluate video scripts into one  
 check the code for hyper parameter optimization   

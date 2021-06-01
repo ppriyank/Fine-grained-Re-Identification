@@ -114,7 +114,7 @@ print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/10
 if use_gpu:
     model = nn.DataParallel(model).cuda()
 
-def test_rerank1(model, queryloader, galleryloader, use_gpu):
+def test_rerank1(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 10, 20]):
     print("Evaluating....")
     model.eval()
     global temp_count
@@ -191,7 +191,7 @@ def test_rerank1(model, queryloader, galleryloader, use_gpu):
         display_results(score, q_pids, g_pids, q_camids, g_camids,distmat_rerank, rerank=True )
 
 
-def test_rerank2(model, queryloader, galleryloader, use_gpu):
+def test_rerank2(model, queryloader, galleryloader, use_gpu, ranks=[1, 5, 10, 20]):
     model.eval()
     global temp_count
     q_pids, q_camids = [], []
@@ -306,11 +306,6 @@ def test_rerank2(model, queryloader, galleryloader, use_gpu):
             print("Rank-{:<3}: {:.1%}".format(r, CMC_re_rank[r-1]))
         print("------------------")
 
-        print("------------------""------------------""------------------""------------------""------------------""------------------")
-        print("------------------""------------------""------ frame + flip +  L2 Re-rank & L2 distance ------------------""------------------""------------------")    
-        distmat_rerank = re_ranking(qf,gf)
-        mAP , re_rank_mAP = display_results(distmat, q_pids, g_pids, q_camids, g_camids, distmat_rerank=distmat_rerank, rerank=True)
-        
 
 
 def display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank=None, rerank=False , ranks=[1, 5, 10, 20]):
@@ -351,6 +346,6 @@ for file in  os.listdir(args.save_dir):
             state_dict[key] = checkpoint['state_dict'][key]
     model.load_state_dict(state_dict,  strict=True)
     print("LOADED :D :D :D ")
-    # test_rerank1(model, queryloader, galleryloader, use_gpu)
+    test_rerank1(model, queryloader, galleryloader, use_gpu)
     test_rerank2(model, queryloader, galleryloader, use_gpu)
-    break
+    
