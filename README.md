@@ -4,6 +4,8 @@ Code for our paper Fine-Grained Re-Identification  : https://arxiv.org/pdf/2011.
 
 ### Table of Contents 
 * **[Cite](#Citation)**<br>  
+  * [Images](#Images)<br>  
+    * [CUHK01](#CUHK01-(p=100)-or-(p=485))<br>
 * **[Required Libraries](#Required-libraries)**<br>
 * **[Dataset Setup](#Dataset-Setup)**<br>  
 * **[Training](#Training)**<br>  
