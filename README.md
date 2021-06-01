@@ -16,8 +16,8 @@ Code for our paper Fine-Grained Re-Identification  : https://arxiv.org/pdf/2011.
 <!--    * [iLIDSVID & PRID](#iLIDSVID-&-PRID)<br> -->
 <!--    * [Mars](#Mars)<br>  -->
 * **[Evalaution](#Evalaution)**<br>  
-  *  [Image Evalaution](#Image-&-Evalaution)<br>
-  *  [Video Evalaution](#Video-&-Evalaution)<br>
+  *  [Image Evalaution](#Image-Evalaution)<br>
+  *  [Video Evalaution](#Video-Evalaution)<br>
 * **[Hyperparameter optimization ](#Hyperparameter-optimization)**<br>  
 * **[Note](#Note)**<br>
 
@@ -135,11 +135,11 @@ Should be easy to run if you understand the code. I discarded these datasets aft
 # Evalaution 
 
 If you have trained model (both images and videos) put it one a path: 
-#### Image & Evalaution
+#### Image Evalaution
 ```
 python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/" --load-distribution 
 ```
-#### Video & Evalaution
+#### Video Evalaution
 ```
 python evaluate_videos.py -d=mars -a="ResNet50TA_BT_video" --height=256 --width=150 --seq-len=5  --save-dir="/scratch/pp1953/resnet/trained/MARS/"
 ```
