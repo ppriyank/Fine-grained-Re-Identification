@@ -4,12 +4,19 @@ Code for our paper Fine-Grained Re-Identification  : https://arxiv.org/pdf/2011.
 
 ### Table of Contents 
 * **[Cite](#Citation)**<br>  
-  * [Images](#Images)<br>  
-    * [CUHK01](#CUHK01-(p=100)-or-(p=485))<br>
 * **[Required Libraries](#Required-libraries)**<br>
 * **[Dataset Setup](#Dataset-Setup)**<br>  
 * **[Training](#Training)**<br>  
+  * [Images](#Images)<br>  
+   * [CUHK01](#CUHK01-(p=100)-or-(p=485))<br>
+   * [Market](#Market)<br>  
+   * [VeRi](#VeRi)<br>  
+  * [Videos](#Videos)<br>  
+   * [iLIDSVID & PRID](#iLIDSVID-&-PRID)<br>
+   * [Mars](#Mars)<br> 
 * **[Evalaution](#Evalaution)**<br>  
+  *  [Image Evalaution](#Image-&-Evalaution)<br>
+  *  [Video Evalaution](#Video-&-Evalaution)<br>
 * **[Hyperparameter optimization ](#Hyperparameter-optimization)**<br>  
 * **[Note](#Note)**<br>
 
@@ -106,14 +113,6 @@ For `iLIDSVID` and `PRID` use `--split` to do expierments on different splits an
 `--num-instances` : number of instances belonging to the same class (referred as --seq-len in images)
 
 
-parser.add_argument('-s', '--sampling', type=str, default='random', help="choose sampling for training")
-parser.add_argument('--thresold', type=int, default='60')
-parser.add_argument('-f', '--focus', type=str, default='map', help="map,rerank_map,rank-1")
-parser.add_argument('--heads', default=4, type=int, help="no of heads of multi head attention")
-parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
-parser.add_argument('--pretrain', action='store_true', help="evaluation only")
-
-
 #### iLIDSVID & PRID
 ```
 python Video.py -d=ilidsvid --split=1 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_video" --pretrain  --evaluate --height=256 --width=150 --train-batch=28 --seq-len=5 --num-instances=4 --save-dir="/scratch/pp1953/resnet/trained/iLIDSVID/"
@@ -135,11 +134,11 @@ Should be easy to run if you understand the code. I discarded these datasets aft
 # Evalaution 
 
 If you have trained model (both images and videos) put it one a path: 
-#### Images
+#### Image & Evalaution
 ```
 python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/" --load-distribution 
 ```
-#### Videos
+#### Video & Evalaution
 ```
 python evaluate_videos.py -d=mars -a="ResNet50TA_BT_video" --height=256 --width=150 --seq-len=5  --save-dir="/scratch/pp1953/resnet/trained/MARS/"
 ```
