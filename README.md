@@ -5,6 +5,7 @@ Code for our paper Fine-Grained Re-Identification  : https://arxiv.org/pdf/2011.
 ### Table of Contents 
 * **[Cite](#Citation)**<br>  
 * **[Required Libraries](#Required-libraries)**<br>
+* **[Model architecture](#Model-architecture)**<br>
 * **[Dataset Setup](#Dataset-Setup)**<br>  
 * **[Training](#Training)**<br>  
   * [Images](#Images)<br>  
@@ -44,6 +45,11 @@ pip install jupyter jupyterhub pandas matplotlib scipy
 pip install scikit-learn scikit-image Pillow
 conda clean --all --yes
 ```
+# Model architecture
+The figure is taken from our paper and re-labeled according to our model script for easier understanding
+
+<img src="https://github.com/ppriyank/Fine-grained-Re-Identification/blob/main/model.jpg" width="900">
+
 # Dataset Setup
 
 Change the `storage_dir` in tools/data_manager.py to the root folder of storage of the dataset. 
