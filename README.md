@@ -8,10 +8,11 @@ Code for our paper Fine-Grained Re-Identification  : https://arxiv.org/pdf/2011.
 * **[Dataset Setup](#Dataset-Setup)**<br>  
 * **[Training](#Training)**<br>  
   * [Images](#Images)<br>  
+  * [Videos](#Videos)<br>  
 <!--    * [CUHK01](#CUHK01-(p=100)-or-(p=485))<br>
    * [Market](#Market)<br>   -->
 <!--    * [VeRi](#VeRi)<br>   -->
-  * [Videos](#Videos)<br>  
+  
 <!--    * [iLIDSVID & PRID](#iLIDSVID-&-PRID)<br> -->
 <!--    * [Mars](#Mars)<br>  -->
 * **[Evalaution](#Evalaution)**<br>  
