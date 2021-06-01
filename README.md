@@ -132,11 +132,14 @@ python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --wi
 python evaluate_videos.py -d=mars -a="ResNet50TA_BT_video" --height=256 --width=150 --seq-len=5  --save-dir="/scratch/pp1953/resnet/trained/MARS/"
 ```
 
+
+# Hyperparameter optimization 
+
+We did hyperparameter optimization only for `MARS`, `iLIDSVID` and `PRID` for all the datasets (even images). 
+Run on MARS subset : `mars_subset2`, PRID subset : `mars_subset2` and iLIDSVID `ilidsvid_subset`.
+
+
 # Note 
 
 `visualize_attention_heads.py` and `plot_tsne.py` are slightly outdated code to visualize attention map and centers of center loss. 
 
-
-# To do : 
-clear other datasets   
-check the code for hyper parameter optimization   
