@@ -1,6 +1,19 @@
 # Fine-grained-Re-Identification
 Code for our paper Fine-Grained Re-Identification  : https://arxiv.org/pdf/2011.13475.pdf
 
+
+### Table of Contents 
+* **[Cite](#Citation)**<br>  
+* **[Required Libraries](#Required-libraries)**<br>
+* **[Dataset Setup](#Dataset-Setup)**<br>  
+* **[Training](#Training)**<br>  
+* **[Evalaution](#Evalaution)**<br>  
+* **[Hyperparameter optimization ](#Hyperparameter-optimization)**<br>  
+* **[Note](#Note)**<br>
+
+
+
+
 # Citation
 If you like our work, please consider citing us: 
 
@@ -13,9 +26,6 @@ If you like our work, please consider citing us:
   volume={abs/2011.13475}
 }
 ```
-# Note
-For concerns regarding privacy, we are not releasing the hyperparameters for our model. Consider running the hyper parameter optimization : https://github.com/facebook/Ax/blob/master/README.md
-
 # Required libraries 
 The code requires python3 
 ```
@@ -140,6 +150,8 @@ Run on MARS subset : `mars_subset2`, PRID subset : `mars_subset2` and iLIDSVID `
 
 
 # Note 
+For concerns regarding privacy, we are not releasing the hyperparameters for our model. Consider running the hyper parameter optimization : https://github.com/facebook/Ax/blob/master/README.md
+
 
 `visualize_attention_heads.py` and `plot_tsne.py` are slightly outdated code to visualize attention map and centers of center loss. 
 
