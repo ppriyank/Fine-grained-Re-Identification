@@ -60,7 +60,7 @@ parser.add_argument('-s', '--sampling', type=str, default='random', help="choose
 parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
 parser.add_argument('--rerank', action='store_true', help="evaluation only")
 parser.add_argument('--normal', action='store_true', help="evaluation only")
-
+parser.add_argument('--load-distribution', action='store_true', help="evaluation only")
 
 args = parser.parse_args()
 
@@ -126,7 +126,7 @@ model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids , f
 # model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids )
 print("Model size: {:.5f}M".format(sum(p.numel() for p in model.parameters())/1000000.0))
 
-if mode != 3 and mode != 7 :
+if mode != 3 and mode != 7 and args.load_distribution :
     path = storage_dir + "dataset/distribution_" + args.dataset +  ".mat"
     distribution = load_distribution(path= path , dataset=args.dataset)
     print("distribution %s loaded"%(path))
@@ -134,8 +134,6 @@ if mode != 3 and mode != 7 :
 
 if use_gpu:
     model = nn.DataParallel(model).cuda()
-
-
 
 def test_rerank(model, queryloader, galleryloader , use_gpu=True):
     model.eval()
@@ -279,46 +277,47 @@ def re_score(gf, g_pids , g_camids, gframes, qf , q_pids, q_camids, qframes):
         distmat_rerank = re_ranking(qf,gf)
         score = -np.matmul(qf , gf.transpose())
         mAP , re_rank_mAP , CMC = display_results(score, q_pids, g_pids, q_camids, g_camids,distmat_rerank, rerank=True )
-        print("------------------""------------------""------------------""------------------""------------------""------------------")
-        print("------------------""------------------""------  Using disttibution (st-ReID) ------------------""------------------""------------------")    
-        CMC_orig, mAP_orig =  eval(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , distribution  )
-        ranks=[1, 5, 10, 20]
-        print("Results ---------- ")
-        print("mAP: {:.1%}".format(mAP_orig))
-        print("CMC curve")
-        for r in ranks:
-            print("Rank-{:<3}: {:.1%}".format(r, CMC_orig[r-1]))
-        print("------------------")
-        print("------------------""------------------""------  Distirbution + Re-rank (st-ReID) ------------------""------------------""------------------")    
-        all_features = np.concatenate([qf,gf],axis=0)
-        all_labels = np.concatenate([q_pids,g_pids],axis=0)
-        all_cams = np.concatenate([q_camids,g_camids],axis=0)
-        all_frames = np.concatenate([qframes,gframes],axis=0)
-        all_scores = np.zeros((len(all_labels),len(all_labels)))
-        print('all_features shape:',all_features.shape)
-        print('all_labels shape:',all_labels.shape)
-        print('all_cams shape:',all_cams.shape)
-        print('all_frames shape:',all_frames.shape)
-        print('all_scores shape:',all_scores.shape)     
-        CMC = torch.IntTensor(len(all_labels)).zero_()
-        ap = 0.0        
-        for i in range(len(all_labels)):
-            scores_new = scoring(all_features[i],all_labels[i],all_cams[i],all_frames[i], all_features,all_labels,all_cams,all_frames,distribution)
-            # print('scores_new shape:',scores_new.shape)
-            all_scores[i,:] = scores_new
+        if args.load_distribution:  
+            print("------------------""------------------""------------------""------------------""------------------""------------------")
+            print("------------------""------------------""------  Using disttibution (st-ReID) ------------------""------------------""------------------")    
+            CMC_orig, mAP_orig =  eval(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , distribution  )
+            ranks=[1, 5, 10, 20]
+            print("Results ---------- ")
+            print("mAP: {:.1%}".format(mAP_orig))
+            print("CMC curve")
+            for r in ranks:
+                print("Rank-{:<3}: {:.1%}".format(r, CMC_orig[r-1]))
+            print("------------------")
+            print("------------------""------------------""------  Distirbution + Re-rank (st-ReID) ------------------""------------------""------------------")    
+            all_features = np.concatenate([qf,gf],axis=0)
+            all_labels = np.concatenate([q_pids,g_pids],axis=0)
+            all_cams = np.concatenate([q_camids,g_camids],axis=0)
+            all_frames = np.concatenate([qframes,gframes],axis=0)
+            all_scores = np.zeros((len(all_labels),len(all_labels)))
+            print('all_features shape:',all_features.shape)
+            print('all_labels shape:',all_labels.shape)
+            print('all_cams shape:',all_cams.shape)
+            print('all_frames shape:',all_frames.shape)
+            print('all_scores shape:',all_scores.shape)     
+            CMC = torch.IntTensor(len(all_labels)).zero_()
+            ap = 0.0        
+            for i in range(len(all_labels)):
+                scores_new = scoring(all_features[i],all_labels[i],all_cams[i],all_frames[i], all_features,all_labels,all_cams,all_frames,distribution)
+                # print('scores_new shape:',scores_new.shape)
+                all_scores[i,:] = scores_new
 
-        print('type(all_scores):',type(all_scores))
-        all_scores = {'all_scores':all_scores}
-        scipy.io.savemat(storage_dir + args.dataset + '_all_scores.mat',all_scores)
-        all_dist = all_scores["all_scores"]
-        CMC, mAP = eval2(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , all_dist)
-        ranks=[1, 5, 10, 20]
-        print("Results ---------- ")
-        print("mAP: {:.1%} , {:.1%}".format(mAP_orig, mAP))
-        print("CMC curve")
-        for r in ranks:
-            print("Rank-{:<3}: {:.1%}, {:.1%}".format(r, CMC_orig[r-1], CMC[r-1]))
-        print("------------------")
+            print('type(all_scores):',type(all_scores))
+            all_scores = {'all_scores':all_scores}
+            scipy.io.savemat(storage_dir + args.dataset + '_all_scores.mat',all_scores)
+            all_dist = all_scores["all_scores"]
+            CMC, mAP = eval2(g_pids , q_pids , qf,  q_camids, qframes, gf , g_camids ,gframes , all_dist)
+            ranks=[1, 5, 10, 20]
+            print("Results ---------- ")
+            print("mAP: {:.1%} , {:.1%}".format(mAP_orig, mAP))
+            print("CMC curve")
+            for r in ranks:
+                print("Rank-{:<3}: {:.1%}, {:.1%}".format(r, CMC_orig[r-1], CMC[r-1]))
+            print("------------------")
         
 
 def display_results(distmat, q_pids, g_pids, q_camids, g_camids,distmat_rerank=None, rerank=False , ranks=[1, 5, 10, 20]):
@@ -374,5 +373,3 @@ for file in  os.listdir(args.save_dir):
             continue 
 
 
-
-# Debugging 

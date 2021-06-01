@@ -11,7 +11,7 @@ import random
 import torchvision.transforms as transforms
 # random.seed(1)
 import pickle
-
+from tools.transforms2 import RandomErasing3
 
 def read_image(img_path, height=224, width = 112):
     """Keep reading image until succeed.
@@ -62,12 +62,6 @@ class VideoDataset(Dataset):
         img_paths, pid, camid = self.dataset[index]
         num = len(img_paths)
 
-        # if self.sample == 'restricted_random':
-        #     frame_indices = range(num)
-        #     chunks = 
-        #     rand_end = max(0, len(frame_indices) - self.seq_len - 1)
-        #     begin_index = random.randint(0, rand_end)
-
         seq_len = self.seq_len
         if self.sample == 'random':
             """
@@ -99,7 +93,48 @@ class VideoDataset(Dataset):
             imgs = torch.cat(imgs, dim=0)
             #imgs=imgs.permute(1,0,2,3)
             return imgs, pid, camid
+        elif self.sample == 'dense':
+            """
+            Sample all frames in a video into a list of clips, each clip contains seq_len frames, batch_size needs to be set to 1.
+            This sampling strategy is used in test phase.
+            """
+            # import pdb
+            # pdb.set_trace()
+        
+            cur_index=0
+            frame_indices = [i for i in range(num)]
+            indices_list=[]
+            while num-cur_index > self.seq_len:
+                indices_list.append(frame_indices[cur_index:cur_index+self.seq_len])
+                cur_index+=self.seq_len
+            last_seq=frame_indices[cur_index:]
+            # print(last_seq)
+            for index in last_seq:
+                if len(last_seq) >= self.seq_len:
+                    break
+                last_seq.append(index)
+            
 
+            indices_list.append(last_seq)
+            imgs_list=[]
+            # print(indices_list , num , img_paths  )
+            for indices in indices_list:
+                if len(imgs_list) > self.max_length:
+                    break 
+                imgs = []
+                for index in indices:
+                    index=int(index)
+                    img_path = img_paths[index]
+                    img = read_image(img_path)
+                    if self.transform is not None:
+                        img = self.transform(img)
+                    img = img.unsqueeze(0)
+                    imgs.append(img)
+                imgs = torch.cat(imgs, dim=0)
+                #imgs=imgs.permute(1,0,2,3)
+                imgs_list.append(imgs)
+            imgs_array = torch.stack(imgs_list)
+            return imgs_array, pid, camid
         elif self.sample == 'test':
             """
             Sample all frames in a video into a list of clips, each clip contains seq_len frames, batch_size needs to be set to 1.
@@ -146,148 +181,24 @@ class VideoDataset(Dataset):
             
             imgs_array = torch.stack(imgs_list)
             
-            # import pdb
-            # pdb.set_trace()
-            
             return imgs_array, pid, camid
-
-        elif self.sample == 'dense':
-            """
-            Sample all frames in a video into a list of clips, each clip contains seq_len frames, batch_size needs to be set to 1.
-            This sampling strategy is used in test phase.
-            """
-            # import pdb
-            # pdb.set_trace()
-        
-            cur_index=0
-            frame_indices = [i for i in range(num)]
-            indices_list=[]
-            while num-cur_index > self.seq_len:
-                indices_list.append(frame_indices[cur_index:cur_index+self.seq_len])
-                cur_index+=self.seq_len
-            last_seq=frame_indices[cur_index:]
-            # print(last_seq)
-            for index in last_seq:
-                if len(last_seq) >= self.seq_len:
-                    break
-                last_seq.append(index)
-            
-
-            indices_list.append(last_seq)
-            imgs_list=[]
-            # print(indices_list , num , img_paths  )
-            for indices in indices_list:
-                if len(imgs_list) > self.max_length:
-                    break 
-                imgs = []
-                for index in indices:
-                    index=int(index)
-                    img_path = img_paths[index]
-                    img = read_image(img_path)
-                    if self.transform is not None:
-                        img = self.transform(img)
-                    img = img.unsqueeze(0)
-                    imgs.append(img)
-                imgs = torch.cat(imgs, dim=0)
-                #imgs=imgs.permute(1,0,2,3)
-                imgs_list.append(imgs)
-            imgs_array = torch.stack(imgs_list)
-            return imgs_array, pid, camid
-
-        elif self.sample == 'dense_subset':
-            """
-            Sample all frames in a video into a list of clips, each clip contains seq_len frames, batch_size needs to be set to 1.
-            This sampling strategy is used in test phase.
-            """
-            frame_indices = range(num)
-            rand_end = max(0, len(frame_indices) - self.max_length - 1)
-            begin_index = random.randint(0, rand_end)
-            
-
-            cur_index=begin_index
-            frame_indices = [i for i in range(num)]
-            indices_list=[]
-            while num-cur_index > self.seq_len:
-                indices_list.append(frame_indices[cur_index:cur_index+self.seq_len])
-                cur_index+=self.seq_len
-            last_seq=frame_indices[cur_index:]
-            # print(last_seq)
-            for index in last_seq:
-                if len(last_seq) >= self.seq_len:
-                    break
-                last_seq.append(index)
-            
-
-            indices_list.append(last_seq)
-            imgs_list=[]
-            # print(indices_list , num , img_paths  )
-            for indices in indices_list:
-                if len(imgs_list) > self.max_length:
-                    break 
-                imgs = []
-                for index in indices:
-                    index=int(index)
-                    img_path = img_paths[index]
-                    img = read_image(img_path)
-                    if self.transform is not None:
-                        img = self.transform(img)
-                    img = img.unsqueeze(0)
-                    imgs.append(img)
-                imgs = torch.cat(imgs, dim=0)
-                #imgs=imgs.permute(1,0,2,3)
-                imgs_list.append(imgs)
-            imgs_array = torch.stack(imgs_list)
-            return imgs_array, pid, camid
-        
-        elif self.sample == 'intelligent_random':
-            # frame_indices = range(num)
-            indices = []
-            each = max(num//seq_len,1)
-            for  i in range(seq_len):
-                if i != seq_len -1:
-                    indices.append(random.randint(min(i*each , num-1), min( (i+1)*each-1, num-1)) )
-                else:
-                    indices.append(random.randint(min(i*each , num-1), num-1) )
-            print(len(indices))
-            imgs = []
-            for index in indices:
-                index=int(index)
-                img_path = img_paths[index]
-                img = read_image(img_path)
-                if self.transform is not None:
-                    img = self.transform(img)
-                img = img.unsqueeze(0)
-                imgs.append(img)
-            imgs = torch.cat(imgs, dim=0)
-            #imgs=imgs.permute(1,0,2,3)
-            return imgs, pid, camid
         else:
             raise KeyError("Unknown sample method: {}. Expected one of {}".format(self.sample, self.sample_methods))
 
 
 
 
-
-from tools.transforms2 import RandomErasing3
-
-
 class VideoDataset_inderase(Dataset):
     """Video Person ReID Dataset.
     Note batch data has shape (batch, seq_len, channel, height, width).
     """
-    sample_methods = ['evenly', 'random', 'all']
-
-    def __init__(self, dataset, seq_len=15, sample='evenly', transform=None , max_length=40):
+    
+    def __init__(self, dataset, seq_len=15,  transform=None , max_length=40):
         self.dataset = dataset
         self.seq_len = seq_len
-        self.sample = sample
         self.transform = transform
         self.max_length = max_length
         self.erase = RandomErasing3(probability=0.5, mean=[0.485, 0.456, 0.406])
-
-        if self.sample == "intelligent":
-            print("\nDistirbuted sampling chosen for dataloader as opposed to default sequence sampling\n")
-        
 
     def __len__(self):
         return len(self.dataset)
@@ -295,29 +206,15 @@ class VideoDataset_inderase(Dataset):
     def __getitem__(self, index):
         img_paths, pid, camid = self.dataset[index]
         num = len(img_paths)
-        if self.sample != "intelligent":
-            frame_indices = range(num)
-            rand_end = max(0, len(frame_indices) - self.seq_len - 1)
-            begin_index = random.randint(0, rand_end)
-            end_index = min(begin_index + self.seq_len, len(frame_indices))
-
-            indices = frame_indices[begin_index:end_index]
-
-            for index in indices:
-                if len(indices) >= self.seq_len:
-                    break
-                indices.append(index)
-            indices=np.array(indices)
-        else:
-            # frame_indices = range(num)
-            indices = []
-            each = max(num//self.seq_len,1)
-            for  i in range(self.seq_len):
-                if i != self.seq_len -1:
-                    indices.append(random.randint(min(i*each , num-1), min( (i+1)*each-1, num-1)) )
-                else:
-                    indices.append(random.randint(min(i*each , num-1), num-1) )
-            # print(len(indices), indices, num )
+        # frame_indices = range(num)
+        indices = []
+        each = max(num//self.seq_len,1)
+        for  i in range(self.seq_len):
+            if i != self.seq_len -1:
+                indices.append(random.randint(min(i*each , num-1), min( (i+1)*each-1, num-1)) )
+            else:
+                indices.append(random.randint(min(i*each , num-1), num-1) )
+        # print(len(indices), indices, num )
         imgs = []
         labels = []
         count  = 0 
@@ -510,17 +407,6 @@ class ImageDataset(Dataset):
                 
             # print(img_paths)
             return img, pid, camid , int(frame)
-        # if self.mode == 4: # for market dataset, parse renames the files
-        #     img = read_image(img_paths)
-        #     camid += 1
-        #     if self.transform is not None:
-        #         img = self.transform(img)
-        #     # print(img_paths)
-        #     # print("===" , self.dict)
-        #     cam_dis = int(img_paths.split("/")[-1].split("_")[0])
-        #     img_paths = parse_frame_cuhk03(img_paths.split("/")[-1], self.dict)
-
-        #     return img, pid, camid , int(img_paths), cam_dis
         if self.mode == 4: # for market dataset, parse renames the files
             img = read_image(img_paths , self.height, self.width)
             camid += 1

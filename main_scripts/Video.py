@@ -57,21 +57,25 @@ parser.add_argument('--num-instances', type=int, default=4, help="number of inst
 parser.add_argument('-a', '--arch', type=str, default="ResNet50TA_BT_video", help="ResNet50TA_BT_video or ResNet50TA_BT_image")
 parser.add_argument('-n', '--mode-name', type=str, default='', help="load pretrained model")
 # Miscs
+parser.add_argument('--split', type=int, default=1)
 parser.add_argument('--seed', type=int, default=1, help="manual seed")
 parser.add_argument('--evaluate', action='store_true', help="evaluation only")
 parser.add_argument('--save-dir', type=str, default='log')
 parser.add_argument('--gpu-devices', default='0,1,2', type=str, help='gpu device ids for CUDA_VISIBLE_DEVICES')
 parser.add_argument('-opt', '--opt', type=str, default='dataset', help="choose opt")
-parser.add_argument('-s', '--sampling', type=str, default='random', help="choose sampling for training")
-parser.add_argument('--thresold', type=int, default='60')
-parser.add_argument('-f', '--focus', type=str, default='map', help="map,rerank_map,rank-1")
-parser.add_argument('--heads', default=4, type=int, help="no of heads of multi head attention")
 parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
 parser.add_argument('--pretrain', action='store_true', help="evaluation only")
+parser.add_argument('--thresold', type=int, default='60')
+parser.add_argument('-f', '--focus', type=str, default='map', help="map,rerank_map,rank-1")
+
 
 
 args = parser.parse_args()
 use_gpu = torch.cuda.is_available()
+random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+np.random.seed(args.seed)
 
 if use_gpu:
     print("train_batch===" ,  args.train_batch , "seq_len" , args.seq_len, "no of gpus : " , os.environ['CUDA_VISIBLE_DEVICES'], torch.cuda.device_count() )
@@ -83,19 +87,10 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_devices
 cudnn.benchmark = True
 
 if args.dataset != "ilidsvid" and args.dataset != "prid":
-    random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed_all(args.seed)
-    np.random.seed(args.seed)
     dataset = data_manager.init_dataset(name=args.dataset)
 else:
-    random.seed(1)
-    torch.manual_seed(1)
-    torch.cuda.manual_seed_all(1)
-    np.random.seed(1)
-    print("Split -- ", args.seed)
-    dataset = data_manager.init_dataset(name=args.dataset, split_id=args.seed)
-
+    print("Split -- ", args.split)
+    dataset = data_manager.init_dataset(name=args.dataset, split_id=args.split)
 
 
 try:
@@ -114,6 +109,7 @@ transform_train = transforms.Compose([
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
 
+
 transform_test = transforms.Compose([
     transforms.Resize((args.height, args.width), interpolation=3),
     transforms.ToTensor(),
@@ -122,7 +118,7 @@ transform_test = transforms.Compose([
 
 
 trainloader = DataLoader(
-    VideoDataset_inderase(dataset.train, seq_len=args.seq_len, sample=args.sampling,transform=transform_train),
+    VideoDataset_inderase(dataset.train, seq_len=args.seq_len,transform=transform_train),
     sampler=RandomIdentitySampler(dataset.train, num_instances=args.num_instances),
     batch_size=args.train_batch, num_workers=args.workers,
     pin_memory=pin_memory, drop_last=True,
@@ -199,19 +195,18 @@ model = models.init_model(name=args.arch, num_classes=dataset.num_train_pids , f
 
 if args.pretrain :
     print("LOADING PRETRAINED ResNet")
-    if args.dataset == "mars":
-        # path = pretrained_ResNets + "bt15_dukevideo_220_150_32_5_4_95_2_59.pth.tar"
-        path =  pretrained_ResNets + "mars_sota.pth.tar"
-        if use_gpu:
-            checkpoint = torch.load( path  )
-        else:
-            checkpoint = torch.load( path , map_location=torch.device('cpu') )
-        state_dict = {}
-        state_dict2 = {}
-        for key in checkpoint['state_dict']:
-            if "base" in  key :
-                temp = key.replace("base." , "")
-                state_dict[temp] = checkpoint['state_dict'][key]
+    # path = pretrained_ResNets + "bt15_dukevideo_220_150_32_5_4_95_2_59.pth.tar"
+    path =  pretrained_ResNets + "mars_sota.pth.tar"
+    if use_gpu:
+        checkpoint = torch.load( path  )
+    else:
+        checkpoint = torch.load( path , map_location=torch.device('cpu') )
+    state_dict = {}
+    state_dict2 = {}
+    for key in checkpoint['state_dict']:
+        if "base" in  key :
+            temp = key.replace("base." , "")
+            state_dict[temp] = checkpoint['state_dict'][key]
     model.base_mars.load_state_dict(state_dict,  strict=True)
     del  state_dict , state_dict2, checkpoint
 
@@ -437,8 +432,6 @@ else:
         train(model, criterion_xent, criterion_htri, optimizer, trainloader, use_gpu , optimizer_center , criterion_center_loss , criterion_osm_caa)
         scheduler.step()
         if epoch in args.epochs_eval :
-            import pdb
-            pdb.set_trace()
             if use_gpu:
                 state_dict = model.module.state_dict()
             else:

@@ -35,12 +35,12 @@ Check the dataset is properly loaded (update the `__factory`, if your dataset is
 python -c "import tools.data_manager as data_manager; dataset = data_manager.init_dataset(name='cuhk01')"
 ```
  
-# Training the model :
+# Training
 Run the training scripts from current folder `cd main_scripts/`
 
 Pre-trained ResNet models are assumed to be stored in `storage_dir +"resnet/"`.   
 `mode_name` stores the name (with absolute path) of the model to be loaded, if pretraining the entire model. It doesnt load the classifier (for loading the classifier, uncomment the code in the section `args.mode_name != ''`).   
-`--evaluate` saves the model after every evalaution.   
+`--evaluate` evaluates the model after each factor(=10) epochs.   
 `-opt` : configuration setting, we have provided only one setting in `tools/dataset_config.conf`, add the configuration there after running hyperparameter optimization there.  
 `--thresold` : number of epochs after which evalaution starts.   
 `--pretrain` : Loading the pre-trained ResNets. We have decided to not provide the `mars_sota.pth.tar` or any other pretrained ResNet. 
@@ -78,7 +78,7 @@ cd ../
 python tools/generate_seq_market.py
 
 cd main_scripts/
-python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/"
+python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/" --load-distribution
 ```
 
 ### VeRi
@@ -88,14 +88,36 @@ python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --wi
 
 ## Videos
 
-For `iLIDSVID` and `PRID` use `--seed` to do expierments on different splits and average the results of 10 splits. `Mars` dataset is huge for evalauting it, the max size of clips used is 32, while for other datasets is 40. 
+For `iLIDSVID` and `PRID` use `--split` to do expierments on different splits and average the results of 10 splits. `Mars` dataset is huge for evalauting it, the max size of clips used is 32, while for other datasets is 40. 
 
 `--seq-len` : length of video clip   
 `--num-instances` : number of instances belonging to the same class (referred as --seq-len in images)
 
+
+parser.add_argument('-s', '--sampling', type=str, default='random', help="choose sampling for training")
+parser.add_argument('--thresold', type=int, default='60')
+parser.add_argument('-f', '--focus', type=str, default='map', help="map,rerank_map,rank-1")
+parser.add_argument('--heads', default=4, type=int, help="no of heads of multi head attention")
+parser.add_argument('--fin-dim', default=2048, type=int, help="final dim for center loss")
+parser.add_argument('--pretrain', action='store_true', help="evaluation only")
+
+
+### iLIDSVID & PRID
 ```
-python Video.py -d=cuhk01 --split=100 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_image" --pretrain  --evaluate --height=256 --width=150 --split=486 --mode-name="/scratch/pp1953/resnet/trained/ResNet50TA_BT_image_cuhk01_dataset_256_150_4_32_checkpoint_ep2.pth.tar"
+python Video.py -d=ilidsvid --split=1 --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_video" --pretrain  --evaluate --height=256 --width=150 --train-batch=28 --seq-len=5 --num-instances=4 --save-dir="/scratch/pp1953/resnet/trained/iLIDSVID/"
 ```
+
+### Mars
+Do not evaluate model and just save all of them, to be evalauted later. 
+```
+python Video.py -d=ilidsvid --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_video" --pretrain  --height=256 --width=150 --train-batch=28 --seq-len=5 --num-instances=4 --save-dir="/scratch/pp1953/resnet/trained/iLIDSVID/"
+
+python Video.py -d=mars --opt=dataset --thresold=20 --max-epoch=500 -a="ResNet50TA_BT_video" --pretrain  --height=256 --width=150 --train-batch=28 --seq-len=5 --num-instances=4 --save-dir="/scratch/pp1953/resnet/trained/MARS/"
+
+python evaluate_videos.py -d=ilidsvid -a="ResNet50TA_BT_video" --height=256 --width=150 --seq-len=5  --save-dir="/scratch/pp1953/resnet/trained/iLIDSVID/"
+```
+
+
 
 ### Other datasets like : (VehicleID , VRIC, CUHK03, GRID, MSMT17, DukeMTMC_VideoReID)
 Should be easy to run if you understand the code. I discarded these datasets after the premilinary experiments werent promising. 
@@ -103,12 +125,22 @@ Should be easy to run if you understand the code. I discarded these datasets aft
 
 
 
+# Evalaution 
 
-## To do : 
+If you have trained model (both images and videos) put it one a path: 
+#### Images
+```
+python evaluate_image.py -d='market2' -a="ResNet50TA_BT_image" --height=256 --width=150 --save-dir="/scratch/pp1953/resnet/trained/Market/" --load-distribution 
+```
+#### Videos
+
+
+# Note 
+
+`visualize_attention_heads.py` and `plot_tsne.py` are slightly outdated code to visualize attention map and centers of center loss. 
+
+
+# To do : 
 clear other datasets   
 merge evaluate video scripts into one  
 check the code for hyper parameter optimization   
-
-
-
-`visualize_attention_heads.py` and `plot_tsne.py` are slightly outdated code to visualize attention map and centers of center loss. 
